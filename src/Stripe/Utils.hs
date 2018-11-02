@@ -46,7 +46,7 @@ data Pagination a = Pagination
 
 -- | No pagination parameters specified, returns the Stripe query with no pagination paramters set.
 basePage :: Pagination a
-basePage = Pagination Nothing Nothing Nothing
+basePage = Pagination (Just 100) Nothing Nothing
 
 -- TODO may need to get fancier
 enumerate :: (StripeMonad m, HasId a (Id a)) => (Pagination a -> m (List a)) -> ConduitT () a m ()
@@ -83,7 +83,10 @@ instance A.FromJSON a => A.FromJSON (List a) where
       <*> opt "total_count"
 
 newtype Id a = Id { fromId :: Text }
-  deriving (Show, Eq, Generic, Typeable)
+  deriving (Eq, Generic, Typeable)
+
+instance Show (Id a) where
+  show = show . fromId
 
 instance A.FromJSON (Id a) where
   parseJSON = A.withText "Id" (pure . Id)

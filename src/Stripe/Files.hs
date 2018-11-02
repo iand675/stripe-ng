@@ -75,3 +75,5 @@ retrieveFile (Id fileId) = jsonGet ("files/" <> encodeUtf8 fileId) []
 
 listAllFiles :: (StripeMonad m) => Pagination File -> m (List File)
 listAllFiles = jsonGet "files" . paginationParams
+
+data CreateFile

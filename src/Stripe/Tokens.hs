@@ -39,6 +39,11 @@ instance FromJSON Token where
       <*> req "type"
       <*> req "used"
 
+data CreateCardToken
+data CreateBankAccount
+data CreatePIIToken
+data CreateAccountToken
+
 {-
 createCardToken
 createBankAccountToken

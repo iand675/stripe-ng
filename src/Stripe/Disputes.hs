@@ -180,3 +180,5 @@ retrieveDispute (Id disputeId) = jsonGet ("disputes/" <> encodeUtf8 disputeId) [
 
 listAllDisputes :: (StripeMonad m) => Pagination Dispute -> m (List Dispute)
 listAllDisputes = jsonGet "disputes" . paginationParams
+
+data UpdateDispute

@@ -7,12 +7,12 @@ data Customer = Customer
   { customerId :: Id Customer
   , customerAccountBalance :: Integer
   , customerCreated :: Timestamp -- TODO timestamp
-  , customerCurrency :: CurrencyCode -- TODO currency code
-  , customerDefaultSource :: Text -- TODO Expandable
+  , customerCurrency :: Maybe CurrencyCode -- TODO currency code
+  , customerDefaultSource :: Maybe Text -- TODO Expandable
   , customerDelinquent :: Bool
   , customerDescription :: Maybe Text
   , customerDiscount :: Maybe Discount
-  , customerEmail :: Maybe Text
+  , customerEmail :: Text
   , customerInvoicePrefix :: Text
   , customerLiveMode :: Bool
   , customerMetadata :: Metadata
@@ -30,12 +30,12 @@ instance FromJSON Customer where
       <$> req "id"
       <*> req "account_balance"
       <*> req "created"
-      <*> req "currency"
-      <*> req "default_source"
+      <*> opt "currency"
+      <*> opt "default_source"
       <*> req "delinquent"
       <*> opt "description"
       <*> opt "discount"
-      <*> opt "email"
+      <*> req "email"
       <*> req "invoice_prefix"
       <*> req "livemode"
       <*> req "metadata"
@@ -83,3 +83,6 @@ retrieveCustomer (Id customerId) = jsonGet ("customers/" <> encodeUtf8 customerI
 
 listAllCustomers :: (StripeMonad m) => Pagination Customer -> m (List Customer)
 listAllCustomers = jsonGet "customers" . paginationParams
+
+data CreateCustomer
+data UpdateCustomer

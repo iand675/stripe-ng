@@ -226,3 +226,7 @@ retrieveCharge (Id chargeId) = jsonGet ("charges/" <> encodeUtf8 chargeId) []
 
 listAllCharges :: StripeMonad m => m (List Charge)
 listAllCharges = jsonGet "charges" []
+
+data CreateCharge
+data UpdateCharge
+data CaptureCharge
