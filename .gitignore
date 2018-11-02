@@ -1,0 +1,4 @@
+.stack-work/
+stripe-ng.cabal
+*~
+.envrc.private
