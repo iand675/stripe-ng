@@ -66,6 +66,11 @@ instance FromJSON BankAccount where
       <*> req "routing_number"
       <*> req "status"
 
+data CreateBankAccount
+data UpdateBankAccount
+data VerifyBankAccount
+data DeleteBankAccount
+
 {-
 createBankAccount
 retrieveBankAccount

@@ -9,7 +9,7 @@ import Stripe.Utils
 data BalanceFunds = BalanceFunds
   { balanceFundsCurrency :: CurrencyCode
   , balanceFundsAmount :: Integer
-  , balanceFundsSourceTypes :: Object
+  , balanceFundsSourceTypes :: HashMap Text Integer
   } deriving (Show, Eq, Generic, Typeable)
 
 instance FromJSON BalanceFunds where
@@ -181,11 +181,11 @@ instance FromJSON BalanceTransaction where
       <*> req "status"
       <*> req "type"
 
-retrieveBalance :: StripeMonad m => m Balance
-retrieveBalance = jsonGet "balance" []
+retrieveBalance :: (StripeMonad m, StripeResult Balance balance) => m balance
+retrieveBalance = jsonGet (Proxy @Balance) "balance" []
 
-retrieveBalanceTransaction :: StripeMonad m => Id BalanceTransaction -> m BalanceTransaction
-retrieveBalanceTransaction (Id txId) = jsonGet ("balance/history/" <> encodeUtf8 txId) []
+retrieveBalanceTransaction :: (StripeMonad m, StripeResult BalanceTransaction balanceTransaction) => Id BalanceTransaction -> m balanceTransaction
+retrieveBalanceTransaction (Id txId) = jsonGet (Proxy @BalanceTransaction) ("balance/history/" <> encodeUtf8 txId) []
 
-listAllBalanceHistory :: StripeMonad m => Pagination BalanceTransaction -> m (List BalanceTransaction)
-listAllBalanceHistory = jsonGet "balance/history" . paginationParams
+listAllBalanceHistory :: (StripeMonad m, StripeResult (List BalanceTransaction) balanceTransactionList) => Pagination BalanceTransaction -> m balanceTransactionList
+listAllBalanceHistory = jsonGet (Proxy @(List BalanceTransaction)) "balance/history" . paginationParams

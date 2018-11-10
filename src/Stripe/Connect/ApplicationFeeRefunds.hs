@@ -25,6 +25,9 @@ instance FromJSON FeeRefund where
       <*> req "fee"
       <*> req "metadata"
 
+data CreateApplicationFeeRefund
+data UpdateApplicationFeeRefund
+
 -- createApplicationFeeRefund :: StripeMonad m => m FeeRefund
 -- retrieveApplicationFeeRefund :: StripeMonad m => m FeeRefund
 -- updateApplicationFeeRefund :: StripeMonad m => m FeeRefund

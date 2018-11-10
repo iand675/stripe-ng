@@ -31,15 +31,19 @@ instance FromJSON TransferReversal where
 
 -- createReversal
 
-retrieveReversal :: (StripeMonad m) => Id Transfer -> Id TransferReversal -> m TransferReversal
+retrieveReversal :: (StripeMonad m, StripeResult TransferReversal transferReversal) => Id Transfer -> Id TransferReversal -> m transferReversal
 retrieveReversal (Id transferId) (Id transferReversalId) =
   jsonGet
+    (Proxy @TransferReversal)
     ("transfers/" <> encodeUtf8 transferId <> "/reversals/" <>
      encodeUtf8 transferReversalId)
     []
 
 -- updateReversal
 
-listAllReversals :: (StripeMonad m) => Id Transfer -> m (List TransferReversal)
+listAllReversals :: (StripeMonad m, StripeResult (List TransferReversal) transferReversalList) => Id Transfer -> m transferReversalList
 listAllReversals (Id transferId) =
-  jsonGet ("transfers/" <> encodeUtf8 transferId <> "/reversals") []
+  jsonGet (Proxy @(List TransferReversal)) ("transfers/" <> encodeUtf8 transferId <> "/reversals") []
+
+data CreateTransferReversal
+data UpdateReversal

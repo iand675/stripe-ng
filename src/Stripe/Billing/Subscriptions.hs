@@ -57,6 +57,7 @@ data Subscription = Subscription
   , subscriptionTaxPercent :: Maybe Double
   , subscriptionTrialEnd :: Maybe Timestamp
   , subscriptionTrialStart :: Maybe Timestamp
+  , subscriptionDefaultSource :: Maybe (Expandable ())
   } deriving (Show, Eq, Generic, Typeable)
 
 instance FromJSON Subscription where
@@ -86,14 +87,15 @@ instance FromJSON Subscription where
       <*> opt "tax_percent"
       <*> opt "trial_end"
       <*> opt "trial_start"
+      <*> opt "default_source"
 
 -- createSubscription
 
-retrieveSubscription :: (StripeMonad m) => Id Subscription -> m Subscription
-retrieveSubscription (Id subscriptionId) = jsonGet ("subscriptions/" <> encodeUtf8 subscriptionId) []
+retrieveSubscription :: (StripeMonad m, StripeResult Subscription subscription) => Id Subscription -> m subscription
+retrieveSubscription (Id subscriptionId) = jsonGet (Proxy @Subscription) ("subscriptions/" <> encodeUtf8 subscriptionId) []
 
 -- updateSubscription
 -- cancelSubscription
 
-listSubscriptions :: (StripeMonad m) => Pagination Subscription -> m (List Subscription)
-listSubscriptions = jsonGet "subscriptions" . paginationParams
+listSubscriptions :: (StripeMonad m, StripeResult (List Subscription) subscriptionList) => Pagination Subscription -> m subscriptionList
+listSubscriptions = jsonGet (Proxy @(List Subscription)) "subscriptions" . paginationParams

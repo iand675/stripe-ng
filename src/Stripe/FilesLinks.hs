@@ -30,10 +30,13 @@ instance FromJSON FileLink where
 
 -- createFileLink
 
-retrieveFileLink :: (StripeMonad m) => Id FileLink -> m FileLink
-retrieveFileLink (Id fileLinkId) = jsonGet ("file_links/" <> encodeUtf8 fileLinkId) []
+retrieveFileLink :: (StripeMonad m, StripeResult FileLink fileLink) => Id FileLink -> m fileLink
+retrieveFileLink (Id fileLinkId) = jsonGet (Proxy @FileLink) ("file_links/" <> encodeUtf8 fileLinkId) []
 
 -- updateFileLink
 
-listAllFileLinks :: (StripeMonad m) => m (List FileLink)
-listAllFileLinks = jsonGet "file_links" []
+listAllFileLinks :: (StripeMonad m, StripeResult (List FileLink) fileLinkList) => m fileLinkList
+listAllFileLinks = jsonGet (Proxy @(List FileLink)) "file_links" []
+
+data CreateFileLink
+data UpdateFileLink

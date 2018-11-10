@@ -57,6 +57,13 @@ data Account = Account
   -- , accountVerification ::
   } deriving (Show, Eq, Generic, Typeable)
 
+
+data CreateAccountToken
+data UpdateAccount
+data DeleteAccount
+data RejectAccount
+data CreateLoginLink
+
 {-
 createAccount
 retrieveAccountDetails

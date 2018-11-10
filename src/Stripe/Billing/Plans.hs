@@ -22,6 +22,11 @@ data BillingScheme
   | Tiered
   deriving (Show, Eq, Generic, Typeable)
 
+instance ToHttpApiData BillingScheme where
+  toQueryParam s = case s of
+    PerUnit -> "per_unit"
+    Tiered -> "tiered"
+
 instance FromJSON BillingScheme where
   parseJSON = withText "BillingScheme" $ \t -> case t of
     "per_unit" -> pure PerUnit
@@ -42,6 +47,13 @@ instance FromJSON BillingInterval where
     "month" -> pure Month
     "year" -> pure Year
     _ -> fail ("Invalid BillingInterval: " ++ show t)
+
+instance ToHttpApiData BillingInterval where
+  toQueryParam i = case i of
+    Day -> "day"
+    Week -> "week"
+    Month -> "month"
+    Year -> "year"
 
 data Tier = Tier
   { tierFlatAmount :: Integer
@@ -100,6 +112,11 @@ instance FromJSON UsageType where
     "licensed" -> pure Licensed
     _ -> fail ("Invalid UsageType: " ++ show t)
 
+instance ToHttpApiData UsageType where
+  toQueryParam u = case u of
+    Metered -> "metered"
+    Licensed -> "licensed"
+
 data Plan = Plan
   { planId :: Id Plan
   , planActive :: Bool
@@ -144,13 +161,46 @@ instance FromJSON Plan where
       <*> opt "trial_period_days"
       <*> req "usage_type"
 
+data NewPlan = NewPlan
+  { newPlanId :: Maybe (Id Plan)
+  , newPlanCurrency :: CurrencyCode
+  , newPlanInterval :: BillingInterval
+  -- TODO can also be a subset of NewProduct fields
+  , newPlanProduct :: Id Product
+  , newPlanActive :: Maybe Bool
+  , newPlanAggregateUsage :: Maybe AggregateUsage
+  , newPlanAmount :: Maybe Integer
+  , newPlanBillingScheme :: Maybe BillingScheme
+  , newPlanIntervalCount :: Maybe Integer
+  , newPlanMetadata :: Metadata
+  , newPlanNickname :: Maybe Text
+  , newPlanTiers :: [Tier]
+  , newPlanTiersMode :: Maybe TiersMode
+  , newPlanTransformUsage :: Maybe TransformUsage
+  , newPlanTrialPeriodDays :: Maybe Integer
+  , newPlanUsageType :: Maybe UsageType
+  }
+
+instance ToForm NewPlan where
+  toForm NewPlan{..} = mconcat
+    [ optParam "id" newPlanId
+    , reqParam "currency" newPlanCurrency
+    , reqParam "interval" newPlanInterval
+    , reqParam "product" newPlanProduct
+    -- , optParam "active"
+    -- , optParam ""
+    , optParam "amount" newPlanAmount
+    , optParam "billing_scheme" newPlanBillingScheme
+    , optParam "interval_count" newPlanIntervalCount
+    ]
+
 -- createPlan
 
-retrievePlan :: (StripeMonad m) => Id Plan -> m Plan
-retrievePlan (Id planId) = jsonGet ("plans/" <> encodeUtf8 planId) []
+retrievePlan :: (StripeMonad m, StripeResult Plan plan) => Id Plan -> m plan
+retrievePlan (Id planId) = jsonGet (Proxy @Plan) ("plans/" <> encodeUtf8 planId) []
 
 -- updatePlan
 -- deletePan
 
-listAllPlans :: (StripeMonad m) => Pagination Plan -> m (List Plan)
-listAllPlans = jsonGet "plans" . paginationParams
+listAllPlans :: (StripeMonad m, StripeResult (List Plan) planList) => Pagination Plan -> m planList
+listAllPlans = jsonGet (Proxy @(List Plan)) "plans" . paginationParams

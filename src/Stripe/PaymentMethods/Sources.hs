@@ -240,6 +240,11 @@ instance FromJSON Source where
       <*> getSourceType
       <*> req "usage"
 
+data CreateSource
+data UpdateSource
+data AttachSource
+data DetachSource
+
 {-
 createSource
 retrieveSource

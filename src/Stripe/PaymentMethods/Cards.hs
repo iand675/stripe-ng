@@ -142,6 +142,10 @@ instance FromJSON Card where
       <*> opt "recipient"
       <*> opt "tokenization_method"
 
+data CreateCard
+data UpdateCard
+data DeleteCard
+
 {-
 createCard
 retrieveCard

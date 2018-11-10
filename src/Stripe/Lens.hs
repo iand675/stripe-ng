@@ -53,6 +53,9 @@ import Stripe.Terminal.PaymentIntents
 import Stripe.Terminal.Readers
 import Stripe.Utils
 
+-- Stripe.Utils
+makeFields ''List
+
 -- Stripe.Balance
 makeFields ''BalanceFunds
 makeFields ''Balance

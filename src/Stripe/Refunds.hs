@@ -80,6 +80,9 @@ instance FromJSON Refund where
       <*> req "source_transfer_reversal"
       <*> req "status"
 
+data CreateRefund
+data UpdateRefund
+
 {-
 createRefund
 retrieveRefund

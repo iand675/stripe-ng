@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
 module Stripe.Files where
 import {-# SOURCE #-} Stripe.FilesLinks
 import Stripe.Utils
@@ -70,10 +72,10 @@ instance FromJSON File where
       <*> req "url"
 
 -- createFile
-retrieveFile :: (StripeMonad m) => Id File -> m File
-retrieveFile (Id fileId) = jsonGet ("files/" <> encodeUtf8 fileId) []
+retrieveFile :: (StripeMonad m, StripeResult File file) => Id File -> m file
+retrieveFile (Id fileId) = jsonGet (Proxy @File) ("files/" <> encodeUtf8 fileId) []
 
-listAllFiles :: (StripeMonad m) => Pagination File -> m (List File)
-listAllFiles = jsonGet "files" . paginationParams
+listAllFiles :: (StripeMonad m, StripeResult (List File) fileList) => Pagination File -> m fileList
+listAllFiles = jsonGet (Proxy @(List File)) "files" . paginationParams
 
 data CreateFile

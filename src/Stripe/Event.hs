@@ -3,8 +3,10 @@
 module Stripe.Event where
 import Data.Aeson
 import Data.Text (Text)
+import Stripe.Billing.Products (Product)
 import Stripe.Utils
 
+{-
 newtype EventType a = EventType { fromEventType :: Text }
 
 newtype ChangedAttributes a = ChangedAttributes { fromChangedAttributes :: Object }
@@ -33,7 +35,6 @@ data Event a = Event
   , eventType :: Text
   }
 
-{-
 {
   "object": {
     "id": "sub_CCIwSga6rdU9QA",
@@ -93,568 +94,577 @@ data Event a = Event
   },
   "previous_attributes": {"status": "past_due"}
 }
--}
+
 data SomeEvent = forall a. SomeEvent (Event a)
 
+data Application = Application
+  { applicationId :: Id Application
+  , applicationName :: Text
+  }
 
 data EventDetails a where
 
-  AccountUpdated :: EventDetails a
+  AccountUpdated :: EventDetails Account
 -- account.updated
 -- ^ describes an account
 --   Occurs whenever an account status or property has changed.
 
-  AccountApplicationAuthorized :: EventDetails a
+  AccountApplicationAuthorized :: EventDetails Application
 -- account.application.authorized
 -- ^ describes an "application"
 --   Occurs whenever a user authorizes an application. Sent to the related application only.
 
-  AccountApplicationDeauthorized :: EventDetails a
+  AccountApplicationDeauthorized :: EventDetails Application
 -- account.application.deauthorized
 -- ^ describes an "application"
 --   Occurs whenever a user deauthorizes an application. Sent to the related application only.
 
-  AccountExternalAccountCreated :: EventDetails a
+  AccountExternalAccountCreated :: EventDetails Object
 -- account.external_account.created
 -- ^ describes an external account (e.g., card or bank account)
 --   Occurs whenever an external account is created.
 
-  AccountExternalAccountDeleted :: EventDetails a
+  AccountExternalAccountDeleted :: EventDetails Object
 -- account.external_account.deleted
 -- ^ describes an external account (e.g., card or bank account)
 --   Occurs whenever an external account is deleted.
 
-  AccountExternalAccountUpdated :: EventDetails a
+  AccountExternalAccountUpdated :: EventDetails Object
 -- account.external_account.updated
 -- ^ describes an external account (e.g., card or bank account)
 --   Occurs whenever an external account is updated.
 
-  ApplicationFeeCreated :: EventDetails a
+  ApplicationFeeCreated :: EventDetails ApplicationFee
 -- application_fee.created
 -- ^ describes an application fee
 --   Occurs whenever an application fee is created on a charge.
 
-  ApplicationFeeRefunded :: EventDetails a
+  ApplicationFeeRefunded :: EventDetails ApplicationFee
 -- application_fee.refunded
 -- ^ describes an application fee
 --   Occurs whenever an application fee is refunded, whether from refunding a charge or from refunding the application fee directly. This includes partial refunds.
 
-  ApplicationFeeRefundUpdated :: EventDetails a
+  ApplicationFeeRefundUpdated :: EventDetails ApplicationFee
 -- application_fee.refund.updated
 -- ^ describes a fee refund
 --   Occurs whenever an application fee refund is updated.
 
-  BalanceAvailable :: EventDetails a
+  BalanceAvailable :: EventDetails Balance
 -- balance.available
 -- ^ describes a balance
 --   Occurs whenever your Stripe balance has been updated (e.g., when a charge is available to be paid out). By default, Stripe automatically transfers funds in your balance to your bank account on a daily basis.
 
-  ChargeCaptured :: EventDetails a
+  ChargeCaptured :: EventDetails Charge
 -- charge.captured
 -- ^ describes a charge
 --   Occurs whenever a previously uncaptured charge is captured.
 
-  ChargeExpired :: EventDetails a
+  ChargeExpired :: EventDetails Charge
 -- charge.expired
 -- ^ describes a charge
 --   Occurs whenever an uncaptured charge expires.
 
-  ChargeFailed :: EventDetails a
+  ChargeFailed :: EventDetails Charge
 -- charge.failed
 -- ^ describes a charge
 --   Occurs whenever a failed charge attempt occurs.
 
-  ChargePending :: EventDetails a
+  ChargePending :: EventDetails Charge
 -- charge.pending
 -- ^ describes a charge
 --   Occurs whenever a pending charge is created.
 
-  ChargeRefunded :: EventDetails a
+  ChargeRefunded :: EventDetails Charge
 -- charge.refunded
 -- ^ describes a charge
 --   Occurs whenever a charge is refunded, including partial refunds.
 
-  ChargeSucceeded :: EventDetails a
+  ChargeSucceeded :: EventDetails Charge
 -- charge.succeeded
 -- ^ describes a charge
 --   Occurs whenever a new charge is created and is successful.
 
-  ChargeUpdated :: EventDetails a
+  ChargeUpdated :: EventDetails Charge
 -- charge.updated
 -- ^ describes a charge
 --   Occurs whenever a charge description or metadata is updated.
 
-  ChargeDisputeClosed :: EventDetails a
+  ChargeDisputeClosed :: EventDetails Dispute
 -- charge.dispute.closed
 -- ^ describes a dispute
 --   Occurs when a dispute is closed and the dispute status changes to charge_refunded, lost, warning_closed, or won.
 
-  ChargeDisputeCreated :: EventDetails a
+  ChargeDisputeCreated :: EventDetails Dispute
 -- charge.dispute.created
 -- ^ describes a dispute
 --   Occurs whenever a customer disputes a charge with their bank.
 
-  ChargeDisputeFundsReinstated :: EventDetails a
+  ChargeDisputeFundsReinstated :: EventDetails Dispute
 -- charge.dispute.funds_reinstated
 -- ^ describes a dispute
 --   Occurs when funds are reinstated to your account after a dispute is closed. This includes partially refunded payments.
 
-  ChargeDisputeFundsWithdrawn :: EventDetails a
+  ChargeDisputeFundsWithdrawn :: EventDetails Dispute
 -- charge.dispute.funds_withdrawn
 -- ^ describes a dispute
 --   Occurs when funds are removed from your account due to a dispute.
 
-  ChargeDisputeUpdated :: EventDetails a
+  ChargeDisputeUpdated :: EventDetails Dispute
 -- charge.dispute.updated
 -- ^ describes a dispute
 --   Occurs when the dispute is updated (usually with evidence).
 
-  ChargeRefundUpdated :: EventDetails a
+  ChargeRefundUpdated :: EventDetails Refund
 -- charge.refund.updated
 -- ^ describes a refund
 --   Occurs whenever a refund is updated, on selected payment methods.
 
-  CouponCreated :: EventDetails a
+  CouponCreated :: EventDetails Coupon
 -- coupon.created
 -- ^ describes a coupon
 --   Occurs whenever a coupon is created.
 
-  CouponDeleted :: EventDetails a
+  CouponDeleted :: EventDetails Coupon
 -- coupon.deleted
 -- ^ describes a coupon
 --   Occurs whenever a coupon is deleted.
 
-  CouponUpdated :: EventDetails a
+  CouponUpdated :: EventDetails Coupon
 -- coupon.updated
 -- ^ describes a coupon
 --   Occurs whenever a coupon is updated.
 
-  CustomerCreated :: EventDetails a
+  CustomerCreated :: EventDetails Customer
 -- customer.created
 -- ^ describes a customer
 --   Occurs whenever a new customer is created.
 
-  CustomerDeleted :: EventDetails a
+  CustomerDeleted :: EventDetails Customer
 -- customer.deleted
 -- ^ describes a customer
 --   Occurs whenever a customer is deleted.
 
-  CustomerUpdated :: EventDetails a
+  CustomerUpdated :: EventDetails Customer
 -- customer.updated
 -- ^ describes a customer
 --   Occurs whenever any property of a customer changes.
 
-  CustomerDiscountCreated :: EventDetails a
+  CustomerDiscountCreated :: EventDetails Discount
 -- customer.discount.created
 -- ^ describes a discount
 --   Occurs whenever a coupon is attached to a customer.
 
-  CustomerDiscountDeleted :: EventDetails a
+  CustomerDiscountDeleted :: EventDetails Discount
 -- customer.discount.deleted
 -- ^ describes a discount
 --   Occurs whenever a coupon is removed from a customer.
 
-  CustomerDiscountUpdated :: EventDetails a
+  CustomerDiscountUpdated :: EventDetails Discount
 -- customer.discount.updated
 -- ^ describes a discount
 --   Occurs whenever a customer is switched from one coupon to another.
 
-  CustomerSourceCreated :: EventDetails a
+  CustomerSourceCreated :: EventDetails Object
 -- customer.source.created
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a new source is created for a customer.
 
-  CustomerSourceDeleted :: EventDetails a
+  CustomerSourceDeleted :: EventDetails Object
 -- customer.source.deleted
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source is removed from a customer.
 
-  CustomerSourceExpiring :: EventDetails a
+  CustomerSourceExpiring :: EventDetails Object
 -- customer.source.expiring
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source will expire at the end of the month.
 
-  CustomerSourceUpdated :: EventDetails a
+  CustomerSourceUpdated :: EventDetails Object
 -- customer.source.updated
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source's details are changed.
 
-  CustomerSubscriptionCreated :: EventDetails a
+  CustomerSubscriptionCreated :: EventDetails Subscription
 -- customer.subscription.created
 -- ^ describes a subscription
 --   Occurs whenever a customer is signed up for a new plan.
 
-  CustomerSubscriptionDeleted :: EventDetails a
+  CustomerSubscriptionDeleted :: EventDetails Subscription
 -- customer.subscription.deleted
 -- ^ describes a subscription
 --   Occurs whenever a customer's subscription ends.
 
-  CustomerSubscriptionTrialWillEnd :: EventDetails a
+  CustomerSubscriptionTrialWillEnd :: EventDetails Subscription
 -- customer.subscription.trial_will_end
 -- ^ describes a subscription
 --   Occurs three days before a subscription's trial period is scheduled to end, or when a trial is ended immediately (using trial_end=now).
 
-  CustomerSubscriptionUpdated :: EventDetails a
+  CustomerSubscriptionUpdated :: EventDetails Subscription
 -- customer.subscription.updated
 -- ^ describes a subscription
 --   Occurs whenever a subscription changes (e.g., switching from one plan to another, or changing the status from trial to active).
 
-  FileCreated :: EventDetails a
+  FileCreated :: EventDetails File
 -- file.created
 -- ^ describes a file
 --   Occurs whenever a new Stripe-generated file is available for your account.
 
-  InvoiceCreated :: EventDetails a
+  InvoiceCreated :: EventDetails Invoice
 -- invoice.created
 -- ^ describes an invoice
 --   Occurs whenever a new invoice is created. To learn how webhooks can be used with this event, and how they can affect it, see Using Webhooks with Subscriptions.
 
-  InvoiceDeleted :: EventDetails a
+  InvoiceDeleted :: EventDetails Invoice
 -- invoice.deleted
 -- ^ describes an invoice
 --   Occurs whenever a draft invoice is deleted.
 
-  InvoiceMarkedUncollectible :: EventDetails a
+  InvoiceMarkedUncollectible :: EventDetails Invoice
 -- invoice.marked_uncollectible
 -- ^ describes an invoice
 --   Occurs whenever an invoice is marked uncollectible.
 
-  InvoicePaymentFailed :: EventDetails a
+  InvoicePaymentFailed :: EventDetails Invoice
 -- invoice.payment_failed
 -- ^ describes an invoice
 --   Occurs whenever an invoice payment attempt fails, due either to a declined payment or to the lack of a stored payment method.
 
-  InvoicePaymentSucceeded :: EventDetails a
+  InvoicePaymentSucceeded :: EventDetails Invoice
 -- invoice.payment_succeeded
 -- ^ describes an invoice
 --   Occurs whenever an invoice payment attempt succeeds.
 
-  InvoiceSent :: EventDetails a
+  InvoiceSent :: EventDetails Invoice
 -- invoice.sent
 -- ^ describes an invoice
 --   Occurs whenever an invoice email is sent out.
 
-  InvoiceUpcoming :: EventDetails a
+  InvoiceUpcoming :: EventDetails Invoice
 -- invoice.upcoming
 -- ^ describes an invoice
 --   Occurs X number of days before a subscription is scheduled to create an invoice that is automatically charged—where X is determined by your subscriptions settings. Note: The received Invoice object will not have an invoice ID.
 
-  InvoiceUpdated :: EventDetails a
+  InvoiceUpdated :: EventDetails Invoice
 -- invoice.updated
 -- ^ describes an invoice
 --   Occurs whenever an invoice changes (e.g., the invoice amount).
 
-  InvoiceVoided :: EventDetails a
+  InvoiceVoided :: EventDetails Invoice
 -- invoice.voided
 -- ^ describes an invoice
 --   Occurs whenever an invoice is voided.
 
-  InvoiceitemCreated :: EventDetails a
+  InvoiceItemCreated :: EventDetails InvoiceItem
 -- invoiceitem.created
 -- ^ describes an invoiceitem
 --   Occurs whenever an invoice item is created.
 
-  InvoiceitemDeleted :: EventDetails a
+  InvoiceItemDeleted :: EventDetails InvoiceItem
 -- invoiceitem.deleted
 -- ^ describes an invoiceitem
 --   Occurs whenever an invoice item is deleted.
 
-  InvoiceitemUpdated :: EventDetails a
+  InvoiceItemUpdated :: EventDetails InvoiceItem
 -- invoiceitem.updated
 -- ^ describes an invoiceitem
 --   Occurs whenever an invoice item is updated.
 
-  IssuerFraudRecordCreated :: EventDetails a
+  IssuerFraudRecordCreated :: EventDetails Object
 -- issuer_fraud_record.created
 -- ^ describes an issuer fraud record
 --   Occurs whenever an issuer fraud record is created.
 
-  IssuingAuthorizationCreated :: EventDetails a
+  IssuingAuthorizationCreated :: EventDetails Object
 -- issuing_authorization.created
 -- ^ describes an issuing authorization
 --   Occurs whenever an authorization is created.
 
-  IssuingAuthorizationUpdated :: EventDetails a
+  IssuingAuthorizationUpdated :: EventDetails Object
 -- issuing_authorization.updated
 -- ^ describes an issuing authorization
 --   Occurs whenever an authorization is updated.
 
-  IssuingCardCreated :: EventDetails a
+  IssuingCardCreated :: EventDetails Object
 -- issuing_card.created
 -- ^ describes an issuing card
 --   Occurs whenever a card is created.
 
-  IssuingCardUpdated :: EventDetails a
+  IssuingCardUpdated :: EventDetails Object
 -- issuing_card.updated
 -- ^ describes an issuing card
 --   Occurs whenever a card is updated.
 
-  IssuingCardholderCreated :: EventDetails a
+  IssuingCardholderCreated :: EventDetails Object
 -- issuing_cardholder.created
 -- ^ describes an issuing cardholder
 --   Occurs whenever a cardholder is created.
 
-  IssuingCardholderUpdated :: EventDetails a
+  IssuingCardholderUpdated :: EventDetails Object
 -- issuing_cardholder.updated
 -- ^ describes an issuing cardholder
 --   Occurs whenever a cardholder is updated.
 
-  IssuingDisputeCreated :: EventDetails a
+  IssuingDisputeCreated :: EventDetails Object
 -- issuing_dispute.created
 -- ^ describes an issuing dispute
 --   Occurs whenever a dispute is created.
 
-  IssuingDisputeUpdated :: EventDetails a
+  IssuingDisputeUpdated :: EventDetails Object
 -- issuing_dispute.updated
 -- ^ describes an issuing dispute
 --   Occurs whenever a dispute is updated.
 
-  IssuingTransactionCreated :: EventDetails a
+  IssuingTransactionCreated :: EventDetails Object
 -- issuing_transaction.created
 -- ^ describes an issuing transaction
 --   Occurs whenever an issuing transaction is created.
 
-  IssuingTransactionUpdated :: EventDetails a
+  IssuingTransactionUpdated :: EventDetails Object
 -- issuing_transaction.updated
 -- ^ describes an issuing transaction
 --   Occurs whenever an issuing transaction is updated.
 
-  OrderCreated :: EventDetails a
+  OrderCreated :: EventDetails Order
 -- order.created
 -- ^ describes an order
 --   Occurs whenever an order is created.
 
-  OrderPaymentFailed :: EventDetails a
+  OrderPaymentFailed :: EventDetails Order
 -- order.payment_failed
 -- ^ describes an order
 --   Occurs whenever an order payment attempt fails.
 
-  OrderPaymentSucceeded :: EventDetails a
+  OrderPaymentSucceeded :: EventDetails Order
 -- order.payment_succeeded
 -- ^ describes an order
 --   Occurs whenever an order payment attempt succeeds.
 
-  OrderUpdated :: EventDetails a
+  OrderUpdated :: EventDetails Order
 -- order.updated
 -- ^ describes an order
 --   Occurs whenever an order is updated.
 
-  OrderReturnCreated :: EventDetails a
+  OrderReturnCreated :: EventDetails Object
 -- order_return.created
 -- ^ describes an order return
 --   Occurs whenever an order return is created.
 
-  PaymentIntentAmountCapturableUpdated :: EventDetails a
+  PaymentIntentAmountCapturableUpdated :: EventDetails PaymentIntent
 -- payment_intent.amount_capturable_updated
 -- ^ describes a payment intent
 --   Occurs when a PaymentIntent is updated.
 
-  PaymentIntentCreated :: EventDetails a
+  PaymentIntentCreated :: EventDetails PaymentIntent
 -- payment_intent.created
 -- ^ describes a payment intent
 --   Occurs when a new PaymentIntent is created.
 
-  PaymentIntentPaymentFailed :: EventDetails a
+  PaymentIntentPaymentFailed :: EventDetails PaymentIntent
 -- payment_intent.payment_failed
 -- ^ describes a payment intent
 --   Occurs when a PaymentIntent has failed the attempt to create a source or a payment.
 
-  PaymentIntentRequiresCapture :: EventDetails a
+  PaymentIntentRequiresCapture :: EventDetails PaymentIntent
 -- payment_intent.requires_capture
 -- ^ describes a payment intent
 --   Occurs when a PaymentIntent is ready to be captured.
 
-  PaymentIntentSucceeded :: EventDetails a
+  PaymentIntentSucceeded :: EventDetails PaymentIntent
 -- payment_intent.succeeded
 -- ^ describes a payment intent
 --   Occurs when a PaymentIntent has been successfully fulfilled.
 
-  PayoutCanceled :: EventDetails a
+  PayoutCanceled :: EventDetails Payout
 -- payout.canceled
 -- ^ describes a payout
 --   Occurs whenever a payout is canceled.
 
-  PayoutCreated :: EventDetails a
+  PayoutCreated :: EventDetails Payout
 -- payout.created
 -- ^ describes a payout
 --   Occurs whenever a payout is created.
 
-  PayoutFailed :: EventDetails a
+  PayoutFailed :: EventDetails Payout
 -- payout.failed
 -- ^ describes a payout
 --   Occurs whenever a payout attempt fails.
 
-  PayoutPaid :: EventDetails a
+  PayoutPaid :: EventDetails Payout
 -- payout.paid
 -- ^ describes a payout
 --   Occurs whenever a payout is expected to be available in the destination account. If the payout fails, a payout.failed notification is also sent, at a later time.
 
-  PayoutUpdated :: EventDetails a
+  PayoutUpdated :: EventDetails Payout
 -- payout.updated
 -- ^ describes a payout
 --   Occurs whenever a payout's metadata is updated.
 
-  PlanCreated :: EventDetails a
+  PlanCreated :: EventDetails Plan
 -- plan.created
 -- ^ describes a plan
 --   Occurs whenever a plan is created.
 
-  PlanDeleted :: EventDetails a
+  PlanDeleted :: EventDetails Plan
 -- plan.deleted
 -- ^ describes a plan
 --   Occurs whenever a plan is deleted.
 
-  PlanUpdated :: EventDetails a
+  PlanUpdated :: EventDetails Plan
 -- plan.updated
 -- ^ describes a plan
 --   Occurs whenever a plan is updated.
 
-  ProductCreated :: EventDetails a
+  ProductCreated :: EventDetails Product
 -- product.created
 -- ^ describes a product
 --   Occurs whenever a product is created.
 
-  ProductDeleted :: EventDetails a
+  ProductDeleted :: EventDetails Product
 -- product.deleted
 -- ^ describes a product
 --   Occurs whenever a product is deleted.
 
-  ProductUpdated :: EventDetails a
+  ProductUpdated :: EventDetails Product
 -- product.updated
 -- ^ describes a product
 --   Occurs whenever a product is updated.
 
-  RecipientCreated :: EventDetails a
+  RecipientCreated :: EventDetails Recipient
 -- recipient.created
 -- ^ describes a recipient
 --   Occurs whenever a recipient is created.
 
-  RecipientDeleted :: EventDetails a
+  RecipientDeleted :: EventDetails Recipient
 -- recipient.deleted
 -- ^ describes a recipient
 --   Occurs whenever a recipient is deleted.
 
-  RecipientUpdated :: EventDetails a
+  RecipientUpdated :: EventDetails Recipient
 -- recipient.updated
 -- ^ describes a recipient
 --   Occurs whenever a recipient is updated.
 
-  ReportingReportRunFailed :: EventDetails a
+  ReportingReportRunFailed :: EventDetails Object
 -- reporting.report_run.failed
 -- ^ describes a report run
 --   Occurs whenever a requested **ReportRun** failed to complete.
 
-  ReportingReportRunSucceeded :: EventDetails a
+  ReportingReportRunSucceeded :: EventDetails Object
 -- reporting.report_run.succeeded
 -- ^ describes a report run
 --   Occurs whenever a requested **ReportRun** completed succesfully.
 
-  ReportingReportTypeUpdated :: EventDetails a
+  ReportingReportTypeUpdated :: EventDetails Object
 -- reporting.report_type.updated
 -- ^ describes a report type
 --   Occurs whenever a **ReportType** is updated (typically to indicate that a new day's data has come available).
 
-  ReviewClosed :: EventDetails a
+  ReviewClosed :: EventDetails Review
 -- review.closed
 -- ^ describes a review
 --   Occurs whenever a review is closed. The review's reason field indicates why: approved, disputed, refunded, or refunded_as_fraud.
 
-  ReviewOpened :: EventDetails a
+  ReviewOpened :: EventDetails Review
 -- review.opened
 -- ^ describes a review
 --   Occurs whenever a review is opened.
 
-  SigmaScheduledQueryRunCreated :: EventDetails a
+  SigmaScheduledQueryRunCreated :: EventDetails Object
 -- sigma.scheduled_query_run.created
 -- ^ describes a scheduled query run
 --   Occurs whenever a Sigma scheduled query run finishes.
 
-  SkuCreated :: EventDetails a
+  SkuCreated :: EventDetails Object
 -- sku.created
 -- ^ describes a sku
 --   Occurs whenever a SKU is created.
 
-  SkuDeleted :: EventDetails a
+  SkuDeleted :: EventDetails Object
 -- sku.deleted
 -- ^ describes a sku
 --   Occurs whenever a SKU is deleted.
 
-  SkuUpdated :: EventDetails a
+  SkuUpdated :: EventDetails Object
 -- sku.updated
 -- ^ describes a sku
 --   Occurs whenever a SKU is updated.
 
-  SourceCanceled :: EventDetails a
+  SourceCanceled :: EventDetails Object
 -- source.canceled
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source is canceled.
 
-  SourceChargeable :: EventDetails a
+  SourceChargeable :: EventDetails Object
 -- source.chargeable
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source transitions to chargeable.
 
-  SourceFailed :: EventDetails a
+  SourceFailed :: EventDetails Object
 -- source.failed
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source fails.
 
-  SourceMandateNotification :: EventDetails a
+  SourceMandateNotification :: EventDetails Object
 -- source.mandate_notification
 -- ^ describes a source (e.g., card)
 --   Occurs whenever a source mandate notification method is set to manual.
 
-  SourceRefundAttributesRequired :: EventDetails a
+  SourceRefundAttributesRequired :: EventDetails Object
 -- source.refund_attributes_required
 -- ^ describes a source (e.g., card)
 --   Occurs whenever the refund attributes are required on a receiver source to process a refund or a mispayment.
 
-  SourceTransactionCreated :: EventDetails a
+  SourceTransactionCreated :: EventDetails Object
 -- source.transaction.created
 -- ^ describes a source transaction
 --   Occurs whenever a source transaction is created.
 
-  SourceTransactionUpdated :: EventDetails a
+  SourceTransactionUpdated :: EventDetails Object
 -- source.transaction.updated
 -- ^ describes a source transaction
 --   Occurs whenever a source transaction is updated.
 
-  TopupCanceled :: EventDetails a
+{-
+TODO subscription_schedule events
+-}
+
+  TopupCanceled :: EventDetails TopUp
 -- topup.canceled
 -- ^ describes a topup
 --   Occurs whenever a top-up is canceled.
 
-  TopupCreated :: EventDetails a
+  TopupCreated :: EventDetails TopUp
 -- topup.created
 -- ^ describes a topup
 --   Occurs whenever a top-up is created.
 
-  TopupFailed :: EventDetails a
+  TopupFailed :: EventDetails TopUp
 -- topup.failed
 -- ^ describes a topup
 --   Occurs whenever a top-up fails.
 
-  TopupReversed :: EventDetails a
+  TopupReversed :: EventDetails TopUp
 -- topup.reversed
 -- ^ describes a topup
 --   Occurs whenever a top-up is reversed.
 
-  TopupSucceeded :: EventDetails a
+  TopupSucceeded :: EventDetails TopUp
 -- topup.succeeded
 -- ^ describes a topup
 --   Occurs whenever a top-up succeeds.
 
-  TransferCreated :: EventDetails a
+  TransferCreated :: EventDetails Transfer
 -- transfer.created
 -- ^ describes a transfer
 --   Occurs whenever a transfer is created.
 
-  TransferReversed :: EventDetails a
+  TransferReversed :: EventDetails Transfer
 -- transfer.reversed
 -- ^ describes a transfer
 --   Occurs whenever a transfer is reversed, including partial reversals.
 
-  TransferUpdated :: EventDetails a
+  TransferUpdated :: EventDetails Transfer
 -- transfer.updated
 -- ^ describes a transfer
 --   Occurs whenever a transfer's description or metadata is updated.
+-}

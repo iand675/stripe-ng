@@ -75,14 +75,14 @@ data UpdateCustomer = UpdateCustomer
 
 -- createCustomer
 
-retrieveCustomer :: (StripeMonad m) => Id Customer -> m Customer
-retrieveCustomer (Id customerId) = jsonGet ("customers/" <> encodeUtf8 customerId) []
+retrieveCustomer :: (StripeMonad m, StripeResult Customer customer) => Id Customer -> m customer
+retrieveCustomer (Id customerId) = jsonGet (Proxy @Customer) ("customers/" <> encodeUtf8 customerId) []
 
 -- updateCustomer
 -- deleteCustomer
 
-listAllCustomers :: (StripeMonad m) => Pagination Customer -> m (List Customer)
-listAllCustomers = jsonGet "customers" . paginationParams
+listAllCustomers :: (StripeMonad m, StripeResult (List Customer) customerList) => Pagination Customer -> m customerList
+listAllCustomers = jsonGet (Proxy @(List Customer)) "customers" . paginationParams
 
 data CreateCustomer
 data UpdateCustomer

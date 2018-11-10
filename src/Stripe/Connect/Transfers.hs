@@ -42,3 +42,7 @@ data Transfer = Transfer
 -- retrieveTransfer
 -- updateTransfer
 -- listAllTransfers
+
+
+data CreateTransfer
+data UpdateTransfer

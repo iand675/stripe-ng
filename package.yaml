@@ -35,16 +35,24 @@ dependencies:
 - http-conduit
 - conduit
 - lens
+- exceptions
 - pretty-show
+- tagged
 - vector
 
 default-extensions:
   - DeriveGeneric
   - OverloadedStrings
   - QuasiQuotes
+  - RecordWildCards
+  - TypeApplications
+  - FlexibleContexts
 
 library:
   source-dirs: src
+  when:
+  - condition: flag(strict-json-check)
+    cpp-options: -DSTRICT_JSON_CHECK
 
 executables:
   stripe-ng-exe:
@@ -72,3 +80,9 @@ tests:
     - tasty-hspec
     - aeson
     - aeson-qq
+
+flags:
+  strict-json-check:
+    description: Fail JSON decoding if properties are unused by results. Primarily intended for nightly automated testing.
+    manual: true
+    default: false

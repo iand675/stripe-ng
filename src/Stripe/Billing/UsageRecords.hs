@@ -22,8 +22,9 @@ instance FromJSON UsageRecord where
 
 -- createUsageRecord
 
-listAllSubscriptionItemPeriodSummaries :: (StripeMonad m) => Id SubscriptionItem -> m (List SubscriptionItem)
+listAllSubscriptionItemPeriodSummaries :: (StripeMonad m, StripeResult (List UsageRecord) usageRecordList) => Id SubscriptionItem -> m usageRecordList
 listAllSubscriptionItemPeriodSummaries (Id subscriptionItemId) =
   jsonGet
+    (Proxy @(List UsageRecord))
     ("subscription_items/" <> encodeUtf8 subscriptionItemId <> "/usage_record_summaries")
     []

@@ -5,7 +5,8 @@ import Stripe.Utils
 data CountrySpec = CountrySpec
   { countrySpecId :: Id CountrySpec
   , countrySpecDefaultCurrency :: CurrencyCode
-  , countrySpecSupportedBankAccountCurrencies :: HashMap CurrencyCode [CountryCode]
+  -- TODO make keys currencycode
+  , countrySpecSupportedBankAccountCurrencies :: HashMap Text [CountryCode]
   , countrySpecSupportedPaymentCurrencies :: [CurrencyCode]
   , countrySpecSupportedPaymentMethods :: [Text]
   , countrySpecSupportedTransferCountries :: [CountryCode]
@@ -46,8 +47,9 @@ instance FromJSON VerificationFieldSpec where
       <$> req "individual"
       <*> req "company"
 
-listCountrySpecs :: StripeMonad m => m (List CountrySpec)
-listCountrySpecs = jsonGet "country_specs" []
+listCountrySpecs :: (StripeMonad m, StripeResult (List CountrySpec) countrySpecList) => m countrySpecList
+listCountrySpecs = jsonGet (Proxy @(List CountrySpec)) "country_specs" []
 
-retrieveCountrySpec :: StripeMonad m => CountryCode -> m (List CountryCode)
-retrieveCountrySpec cc = jsonGet ("country_specs/" <> encodeUtf8 cc) []
+-- TODO this seems wrong
+retrieveCountrySpec :: (StripeMonad m, StripeResult (List CountryCode) countryCodeList) => CountryCode -> m countryCodeList
+retrieveCountrySpec cc = jsonGet (Proxy @(List CountryCode)) ("country_specs/" <> encodeUtf8 cc) []

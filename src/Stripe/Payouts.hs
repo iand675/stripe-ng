@@ -56,3 +56,7 @@ updatePayout
 listAllPayouts
 cancelPayout
 -}
+
+data CreatePayout
+data UpdatePayout
+data CancelPayout

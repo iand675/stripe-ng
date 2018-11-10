@@ -5,3 +5,7 @@ module Stripe.Issuing.Authorizations where
 -- approveAuthorization
 -- declineAuthorization
 -- listAllAuthorizations
+
+data UpdateAuthorization
+data ApproveAuthorization
+data DeclineAuthorization

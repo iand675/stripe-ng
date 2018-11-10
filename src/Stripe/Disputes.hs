@@ -172,13 +172,13 @@ instance FromJSON Dispute where
       <*> req "reason"
       <*> req "status"
 
-retrieveDispute :: (StripeMonad m) => Id Dispute -> m Dispute
-retrieveDispute (Id disputeId) = jsonGet ("disputes/" <> encodeUtf8 disputeId) []
+retrieveDispute :: (StripeMonad m, StripeResult Dispute dispute) => Id Dispute -> m dispute
+retrieveDispute (Id disputeId) = jsonGet (Proxy @Dispute) ("disputes/" <> encodeUtf8 disputeId) []
 
 -- updateDispute
 -- closeDispute
 
-listAllDisputes :: (StripeMonad m) => Pagination Dispute -> m (List Dispute)
-listAllDisputes = jsonGet "disputes" . paginationParams
+listAllDisputes :: (StripeMonad m, StripeResult (List Dispute) disputeList) => Pagination Dispute -> m disputeList
+listAllDisputes = jsonGet (Proxy @(List Dispute)) "disputes" . paginationParams
 
 data UpdateDispute

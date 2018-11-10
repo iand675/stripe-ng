@@ -54,11 +54,11 @@ instance FromJSON Coupon where
 
 -- createCoupon
 
-retrieveCoupon :: (StripeMonad m) => Id Coupon -> m Coupon
-retrieveCoupon (Id couponId) = jsonGet ("coupons/" <> encodeUtf8 couponId) []
+retrieveCoupon :: (StripeMonad m, StripeResult Coupon coupon) => Id Coupon -> m coupon
+retrieveCoupon (Id couponId) = jsonGet (Proxy @Coupon) ("coupons/" <> encodeUtf8 couponId) []
 
 -- updateCoupon
 -- deleteCoupon
 
-listAllCoupons :: (StripeMonad m) => Pagination Coupon -> m (List Coupon)
-listAllCoupons = jsonGet "coupons" . paginationParams
+listAllCoupons :: (StripeMonad m, StripeResult (List Coupon) couponList) => Pagination Coupon -> m couponList
+listAllCoupons = jsonGet (Proxy @(List Coupon)) "coupons" . paginationParams
