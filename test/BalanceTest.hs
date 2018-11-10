@@ -17,10 +17,10 @@ spec_balance_history :: Spec
 spec_balance_history = do
   specify "List history" $ do
     h <- stripeWithEnv $ listAllBalanceHistory basePage
-    shouldSatisfy h ((>= 0) . length . listData)
+    shouldSatisfy h ((>= 0) . length . listData_)
   specify "Get balance transaction" $ do
     h <- stripeWithEnv $ listAllBalanceHistory basePage
-    shouldSatisfy h ((>= 1) . length . listData)
-    t <- stripeWithEnv $ retrieveBalanceTransaction $ balanceTransactionId $ V.head $ listData h
+    shouldSatisfy h ((>= 1) . length . listData_)
+    t <- stripeWithEnv $ retrieveBalanceTransaction $ balanceTransactionId $ V.head $ listData_ h
     print t
     view S.currency t `shouldBe` USD
