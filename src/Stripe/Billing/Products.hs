@@ -132,6 +132,9 @@ instance ToForm ListAllProductsQuery where
     , optParam "url" listAllProductsQueryUrl
     ]
 
+instance BaseQuery ListAllProductsQuery where
+  baseQuery = ListAllProductsQuery Nothing Nothing Nothing Nothing Nothing
+
 listAllProducts :: (StripeMonad m, StripeResult (List Product) productList) => ListAllProductsQuery -> Pagination Product -> m productList
 listAllProducts pq = jsonGet (Proxy @(List Product)) "products" . joinParams pq . paginationParams
 

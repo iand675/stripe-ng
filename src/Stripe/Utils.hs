@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -27,6 +28,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Char8 as C
 import Conduit (ConduitT, yieldMany)
+import Data.Hashable
 import Data.Maybe (isJust)
 import Data.Monoid
 import Data.Tagged
@@ -107,17 +109,10 @@ instance A.FromJSON a => A.FromJSON (List a) where
       <*> opt "total_count"
 
 newtype Id a = Id { fromId :: Text }
-  deriving (Eq, Generic, Typeable)
-
-instance ToHttpApiData (Id a) where
-  toUrlPiece (Id a) = toUrlPiece a
-  toQueryParam (Id a) = toQueryParam a
+  deriving (Eq, Generic, Typeable, Hashable, A.ToJSON, A.FromJSON, ToHttpApiData)
 
 instance Show (Id a) where
   show = show . fromId
-
-instance A.FromJSON (Id a) where
-  parseJSON = A.withText "Id" (pure . Id)
 
 newtype Timestamp = Timestamp Integer
   deriving (Show, Eq, Generic, Typeable)
@@ -750,3 +745,6 @@ instance ToHttpApiData CurrencyCode where
     YER -> "yer"
     ZAR -> "zar"
     ZMW -> "zmw"
+
+class BaseQuery a where
+  baseQuery :: a
