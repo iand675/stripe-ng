@@ -15,6 +15,7 @@ module Stripe.Utils
   , A.withText
   , encodeUtf8
   , decodeUtf8
+  , (<>)
   ) where
 
 import Control.Lens (Lens', view)
@@ -27,6 +28,7 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Char8 as C
 import Conduit (ConduitT, yieldMany)
 import Data.Maybe (isJust)
+import Data.Monoid
 import Data.Tagged
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8, decodeUtf8)
