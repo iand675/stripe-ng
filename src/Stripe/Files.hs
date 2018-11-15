@@ -72,10 +72,10 @@ instance FromJSON File where
       <*> req "url"
 
 -- createFile
-retrieveFile :: (StripeMonad m, StripeResult File file) => Id File -> m file
-retrieveFile (Id fileId) = jsonGet (Proxy @File) ("files/" <> encodeUtf8 fileId) []
+retrieveFile :: (MonadStripe m, StripeResult File file) => Id File -> m file
+retrieveFile (Id fileId) = stripeGet (Proxy @File) ("files/" <> encodeUtf8 fileId) []
 
-listAllFiles :: (StripeMonad m, StripeResult (List File) fileList) => Pagination File -> m fileList
-listAllFiles = jsonGet (Proxy @(List File)) "files" . paginationParams
+listAllFiles :: (MonadStripe m, StripeResult (List File) fileList) => Pagination File -> m fileList
+listAllFiles = stripeGet (Proxy @(List File)) "files" . paginationParams
 
 data CreateFile

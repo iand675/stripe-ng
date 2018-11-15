@@ -1,4 +1,5 @@
 module Stripe.Customers where
+import Stripe.Billing.Coupons
 import Stripe.Billing.Discounts
 import Stripe.Billing.Subscriptions
 import Stripe.Utils
@@ -45,44 +46,90 @@ instance FromJSON Customer where
       <*> opt "tax_info"
       <*> opt "tax_info_verification"
 
-{-
 data NewCustomer = NewCustomer
-  { newCustomerAccountBalance
-  , newCustomerCOupon
-  , newCustomerDefaultSource
-  , newCustomerDescription
-  , newCustomerEmail
-  , newCustomerInvoicePrefix
-  , newCustomerMetadata
-  , newCustomerShipping
-  , newCustomerSource
-  , newCustomerTaxInfo
-  }
+  { newCustomerAccountBalance :: Maybe Integer
+  , newCustomerCoupon :: Maybe (Id Coupon)
+  , newCustomerDefaultSource :: Maybe (Id ())
+  , newCustomerDescription :: Maybe Text
+  , newCustomerEmail :: Maybe Text
+  , newCustomerInvoicePrefix :: Maybe Text
+  -- , newCustomerMetadata
+  -- , newCustomerShipping
+  , newCustomerSource :: Maybe Text -- TODO can be lots of things
+  -- , newCustomerTaxInfo ::
+  } deriving (Show, Eq, Generic, Typeable)
+
+instance ToForm NewCustomer where
+  toForm NewCustomer{..} = mconcat
+    [ optParam "account_balance" newCustomerAccountBalance
+    , optParam "coupon" newCustomerCoupon
+    , optParam "default_source" newCustomerDefaultSource
+    , optParam "description" newCustomerDescription
+    , optParam "email" newCustomerEmail
+    , optParam "invoice_prefix" newCustomerInvoicePrefix
+    , optParam "source" newCustomerSource
+    ]
+
+instance BaseQuery NewCustomer where
+  baseQuery = NewCustomer
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+
+createCustomer :: (MonadStripe m, StripeResult Customer customer) => NewCustomer -> m customer
+createCustomer = stripePost (Proxy @Customer) "customers"
+
+retrieveCustomer :: (MonadStripe m, StripeResult Customer customer) => Id Customer -> m customer
+retrieveCustomer (Id customerId) = stripeGet (Proxy @Customer) ("customers/" <> encodeUtf8 customerId) []
 
 data UpdateCustomer = UpdateCustomer
-  { updateCustomerAccountBalance
-  , updateCustomerCoupon
-  , updateCustomerDefaultSource
-  , updateCustomerDescription
-  , updateCustomerEmail
-  , updateCustomerInvoicePrefix
+  { updateCustomerAccountBalance :: Maybe Integer
+  , updateCustomerCoupon :: Maybe (Id Coupon)
+  , updateCustomerDefaultSource :: Maybe (Id ())
+  , updateCustomerDescription :: Maybe Text
+  , updateCustomerEmail :: Maybe Text
+  , updateCustomerInvoicePrefix :: Maybe Text
+  {- TODO
   , updateCustomerMetadata
   , updateCustomerShipping
-  , updateCustomerSource
+  -}
+  , updateCustomerSource :: Maybe Text
+  {-
   , updateCustomerTaxInfo
-  }
--}
+  -}
+  } deriving (Show, Eq, Generic, Typeable)
 
--- createCustomer
+instance ToForm UpdateCustomer where
+  toForm UpdateCustomer{..} = mconcat
+    [ optParam "account_balance" updateCustomerAccountBalance
+    , optParam "coupon" updateCustomerCoupon
+    , optParam "default_source" updateCustomerDefaultSource
+    , optParam "description" updateCustomerDescription
+    , optParam "email" updateCustomerEmail
+    , optParam "invoice_prefix" updateCustomerInvoicePrefix
+    , optParam "source" updateCustomerSource
+    ]
 
-retrieveCustomer :: (StripeMonad m, StripeResult Customer customer) => Id Customer -> m customer
-retrieveCustomer (Id customerId) = jsonGet (Proxy @Customer) ("customers/" <> encodeUtf8 customerId) []
+instance BaseQuery UpdateCustomer where
+  baseQuery = UpdateCustomer
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
 
--- updateCustomer
+updateCustomer :: (MonadStripe m, StripeResult Customer customer) => Id Customer -> UpdateCustomer -> m customer
+updateCustomer (Id customerId) = stripePost (Proxy @Customer) ("customers/" <> encodeUtf8 customerId)
+
 -- deleteCustomer
 
-listAllCustomers :: (StripeMonad m, StripeResult (List Customer) customerList) => Pagination Customer -> m customerList
-listAllCustomers = jsonGet (Proxy @(List Customer)) "customers" . paginationParams
+listAllCustomers :: (MonadStripe m, StripeResult (List Customer) customerList) => Pagination Customer -> m customerList
+listAllCustomers = stripeGet (Proxy @(List Customer)) "customers" . paginationParams
 
 data CreateCustomer
-data UpdateCustomer

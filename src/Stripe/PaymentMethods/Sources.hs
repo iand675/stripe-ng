@@ -74,7 +74,7 @@ instance FromJSON RedirectFailureReason where
   parseJSON = withText "RedirectFailureReason" $ \t -> case t of
     "user_abort" -> pure UserAbort
     "declined" -> pure Declined
-    "processing_error" -> pure ProcessingError
+    "processing_error" -> pure Stripe.PaymentMethods.Sources.ProcessingError
     _ -> fail ("Invalid RedirectFailureReason: " ++ show t)
 
 data RedirectStatus

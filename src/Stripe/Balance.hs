@@ -181,11 +181,11 @@ instance FromJSON BalanceTransaction where
       <*> req "status"
       <*> req "type"
 
-retrieveBalance :: (StripeMonad m, StripeResult Balance balance) => m balance
-retrieveBalance = jsonGet (Proxy @Balance) "balance" []
+retrieveBalance :: (MonadStripe m, StripeResult Balance balance) => m balance
+retrieveBalance = stripeGet (Proxy @Balance) "balance" []
 
-retrieveBalanceTransaction :: (StripeMonad m, StripeResult BalanceTransaction balanceTransaction) => Id BalanceTransaction -> m balanceTransaction
-retrieveBalanceTransaction (Id txId) = jsonGet (Proxy @BalanceTransaction) ("balance/history/" <> encodeUtf8 txId) []
+retrieveBalanceTransaction :: (MonadStripe m, StripeResult BalanceTransaction balanceTransaction) => Id BalanceTransaction -> m balanceTransaction
+retrieveBalanceTransaction (Id txId) = stripeGet (Proxy @BalanceTransaction) ("balance/history/" <> encodeUtf8 txId) []
 
-listAllBalanceHistory :: (StripeMonad m, StripeResult (List BalanceTransaction) balanceTransactionList) => Pagination BalanceTransaction -> m balanceTransactionList
-listAllBalanceHistory = jsonGet (Proxy @(List BalanceTransaction)) "balance/history" . paginationParams
+listAllBalanceHistory :: (MonadStripe m, StripeResult (List BalanceTransaction) balanceTransactionList) => Pagination BalanceTransaction -> m balanceTransactionList
+listAllBalanceHistory = stripeGet (Proxy @(List BalanceTransaction)) "balance/history" . paginationParams

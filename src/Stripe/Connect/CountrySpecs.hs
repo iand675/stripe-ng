@@ -47,9 +47,9 @@ instance FromJSON VerificationFieldSpec where
       <$> req "individual"
       <*> req "company"
 
-listCountrySpecs :: (StripeMonad m, StripeResult (List CountrySpec) countrySpecList) => m countrySpecList
-listCountrySpecs = jsonGet (Proxy @(List CountrySpec)) "country_specs" []
+listCountrySpecs :: (MonadStripe m, StripeResult (List CountrySpec) countrySpecList) => m countrySpecList
+listCountrySpecs = stripeGet (Proxy @(List CountrySpec)) "country_specs" []
 
 -- TODO this seems wrong
-retrieveCountrySpec :: (StripeMonad m, StripeResult (List CountryCode) countryCodeList) => CountryCode -> m countryCodeList
-retrieveCountrySpec cc = jsonGet (Proxy @(List CountryCode)) ("country_specs/" <> encodeUtf8 cc) []
+retrieveCountrySpec :: (MonadStripe m, StripeResult (List CountryCode) countryCodeList) => CountryCode -> m countryCodeList
+retrieveCountrySpec cc = stripeGet (Proxy @(List CountryCode)) ("country_specs/" <> encodeUtf8 cc) []

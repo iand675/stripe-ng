@@ -23,7 +23,7 @@ data DisputeReason
 instance FromJSON DisputeReason where
   parseJSON = withText "DisputeReason" $ \t -> case t of
     "duplicate" -> pure Duplicate
-    "fraudulent" -> pure Fraudulent
+    "fraudulent" -> pure Stripe.Disputes.Fraudulent
     "subscription_canceled" -> pure SubscriptionCanceled
     "product_unacceptable" -> pure ProductUnacceptable
     "product_not_received" -> pure ProductNotReceived
@@ -31,7 +31,7 @@ instance FromJSON DisputeReason where
     "credit_not_processed" -> pure CreditNotProcessed
     "general" -> pure General
     "incorrect_account_details" -> pure IncorrectAccountDetails
-    "insufficient_funds" -> pure InsufficientFunds
+    "insufficient_funds" -> pure Stripe.Disputes.InsufficientFunds
     "bank_cannot_process" -> pure BankCannotProcess
     "debit_not_authorized" -> pure DebitNotAuthorized
     "customer_initiated" -> pure CustomerInitiated
@@ -172,13 +172,13 @@ instance FromJSON Dispute where
       <*> req "reason"
       <*> req "status"
 
-retrieveDispute :: (StripeMonad m, StripeResult Dispute dispute) => Id Dispute -> m dispute
-retrieveDispute (Id disputeId) = jsonGet (Proxy @Dispute) ("disputes/" <> encodeUtf8 disputeId) []
+retrieveDispute :: (MonadStripe m, StripeResult Dispute dispute) => Id Dispute -> m dispute
+retrieveDispute (Id disputeId) = stripeGet (Proxy @Dispute) ("disputes/" <> encodeUtf8 disputeId) []
 
 -- updateDispute
 -- closeDispute
 
-listAllDisputes :: (StripeMonad m, StripeResult (List Dispute) disputeList) => Pagination Dispute -> m disputeList
-listAllDisputes = jsonGet (Proxy @(List Dispute)) "disputes" . paginationParams
+listAllDisputes :: (MonadStripe m, StripeResult (List Dispute) disputeList) => Pagination Dispute -> m disputeList
+listAllDisputes = stripeGet (Proxy @(List Dispute)) "disputes" . paginationParams
 
 data UpdateDispute

@@ -5,9 +5,9 @@ import Stripe.Utils
 
 -- createBankAccount
 
-retrieveBankAccount :: (StripeMonad m, StripeResult BankAccount bankAccount) => Id () -> Id BankAccount -> m bankAccount
+retrieveBankAccount :: (MonadStripe m, StripeResult BankAccount bankAccount) => Id () -> Id BankAccount -> m bankAccount
 retrieveBankAccount (Id accountId) (Id bankAccountId) =
-  jsonGet
+  stripeGet
     (Proxy @BankAccount)
     ("accounts/" <> encodeUtf8 accountId <> "/external_accounts/" <>
      encodeUtf8 bankAccountId)

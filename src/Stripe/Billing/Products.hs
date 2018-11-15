@@ -72,8 +72,8 @@ instance FromJSON Product where
       <*> opt "updated"
       <*> opt "url"
 
-createProduct :: (StripeMonad m, StripeResult Product product) => NewProduct -> m product
-createProduct = formPost (Proxy @Product) "products"
+createProduct :: (MonadStripe m, StripeResult Product product) => NewProduct -> m product
+createProduct = stripePost (Proxy @Product) "products"
 
 -- TODO this takes a number of different things for service vs good products, need to consolidate the two.
 
@@ -108,8 +108,8 @@ instance ToForm NewProduct where
     ]
 
 
-retrieveProduct :: (StripeMonad m, StripeResult Product product) => Id Product -> m product
-retrieveProduct (Id productId) = jsonGet (Proxy @Product) ("products/" <> encodeUtf8 productId) []
+retrieveProduct :: (MonadStripe m, StripeResult Product product) => Id Product -> m product
+retrieveProduct (Id productId) = stripeGet (Proxy @Product) ("products/" <> encodeUtf8 productId) []
 
 -- updateProduct
 data UpdateProduct
@@ -135,8 +135,12 @@ instance ToForm ListAllProductsQuery where
 instance BaseQuery ListAllProductsQuery where
   baseQuery = ListAllProductsQuery Nothing Nothing Nothing Nothing Nothing
 
-listAllProducts :: (StripeMonad m, StripeResult (List Product) productList) => ListAllProductsQuery -> Pagination Product -> m productList
-listAllProducts pq = jsonGet (Proxy @(List Product)) "products" . joinParams pq . paginationParams
+listAllProducts ::
+     (MonadStripe m, StripeResult (List Product) productList)
+  => ListAllProductsQuery
+  -> Pagination Product
+  -> m productList
+listAllProducts pq = stripeGet (Proxy @(List Product)) "products" . joinParams pq . paginationParams
 
 -- deleteProduct
 data DeleteProduct

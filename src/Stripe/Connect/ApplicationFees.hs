@@ -39,8 +39,8 @@ instance FromJSON Fee where
       <*> req "refunds"
 
 
-retrieveApplicationFee :: (StripeMonad m, StripeResult Fee fee) => Id Fee -> m fee
-retrieveApplicationFee (Id feeId) = jsonGet (Proxy @Fee) ("application_fees/" <> encodeUtf8 feeId) []
+retrieveApplicationFee :: (MonadStripe m, StripeResult Fee fee) => Id Fee -> m fee
+retrieveApplicationFee (Id feeId) = stripeGet (Proxy @Fee) ("application_fees/" <> encodeUtf8 feeId) []
 
-listAllApplicationFees :: (StripeMonad m, StripeResult (List Fee) feeList) => m feeList
-listAllApplicationFees = jsonGet (Proxy @(List Fee)) "application_fees" []
+listAllApplicationFees :: (MonadStripe m, StripeResult (List Fee) feeList) => m feeList
+listAllApplicationFees = stripeGet (Proxy @(List Fee)) "application_fees" []

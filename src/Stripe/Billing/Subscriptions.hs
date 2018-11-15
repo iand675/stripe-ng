@@ -1,8 +1,10 @@
 module Stripe.Billing.Subscriptions where
+import Stripe.Billing.Coupons
 import {-# SOURCE #-} Stripe.Billing.Discounts
 import Stripe.Billing.Plans
 import {-# SOURCE #-} Stripe.Billing.SubscriptionItems
 import {-# SOURCE #-} Stripe.Customers
+import Data.List.NonEmpty (NonEmpty)
 import Stripe.Utils
 
 data ChargeMode
@@ -89,13 +91,108 @@ instance FromJSON Subscription where
       <*> opt "trial_start"
       <*> opt "default_source"
 
--- createSubscription
+data NewSubscriptionItem = NewSubscriptionItem
+  { newSubscriptionItemPlan :: Id Plan
+  , newSubscriptionItemQuantity :: Maybe Int
+  }
 
-retrieveSubscription :: (StripeMonad m, StripeResult Subscription subscription) => Id Subscription -> m subscription
-retrieveSubscription (Id subscriptionId) = jsonGet (Proxy @Subscription) ("subscriptions/" <> encodeUtf8 subscriptionId) []
+instance ToForm NewSubscriptionItem where
+  toForm NewSubscriptionItem{..} = mconcat
+    [ reqParam "plan" newSubscriptionItemPlan
+    , optParam "quantity" newSubscriptionItemQuantity
+    ]
 
--- updateSubscription
--- cancelSubscription
+data NewSubscription = NewSubscription
+  { newSubscriptionCustomer :: Id Customer
+  , newSubscriptionItems :: NonEmpty NewSubscriptionItem
+  , newSubscriptionCoupon :: Maybe (Id Coupon)
+  }
 
-listSubscriptions :: (StripeMonad m, StripeResult (List Subscription) subscriptionList) => Pagination Subscription -> m subscriptionList
-listSubscriptions = jsonGet (Proxy @(List Subscription)) "subscriptions" . paginationParams
+instance ToForm NewSubscription where
+  toForm NewSubscription{..} = mconcat
+    [ reqParam "customer" newSubscriptionCustomer
+    , indexedArrayFormParams "items" newSubscriptionItems
+    , optParam "coupon" newSubscriptionCoupon
+    ]
+
+newSubscription :: Id Customer -> NonEmpty NewSubscriptionItem -> NewSubscription
+newSubscription cid xs = NewSubscription
+  { newSubscriptionCustomer = cid
+  , newSubscriptionItems = xs
+  , newSubscriptionCoupon = Nothing
+  }
+
+createSubscription :: (MonadStripe m, StripeResult Subscription subscription) => NewSubscription -> m subscription
+createSubscription = stripePost (Proxy @Subscription) "subscriptions"
+
+retrieveSubscription :: (MonadStripe m, StripeResult Subscription subscription) => Id Subscription -> m subscription
+retrieveSubscription (Id subscriptionId) = stripeGet (Proxy @Subscription) ("subscriptions/" <> encodeUtf8 subscriptionId) []
+
+data UpdateSubscriptionItem = UpdateSubscriptionItem
+  { updateSubscriptionItemId :: Maybe (Id SubscriptionItem)
+  , updateSubscriptionItemClearUsage :: Maybe Bool
+  , updateSubscriptionItemDeleted :: Maybe Bool
+  , updateSubscriptionItemMetadata :: Metadata
+  , updateSubscriptionItemPlan :: Maybe (Id Plan)
+  , updateSubscriptionItemQuantity :: Maybe Int
+  }
+
+instance BaseQuery UpdateSubscriptionItem where
+  baseQuery = UpdateSubscriptionItem
+    Nothing
+    Nothing
+    Nothing
+    mempty
+    Nothing
+    Nothing
+
+instance ToForm UpdateSubscriptionItem where
+  toForm UpdateSubscriptionItem{..} = mconcat
+    [ optParam "id" updateSubscriptionItemId
+    , optParam "clear_usage" updateSubscriptionItemClearUsage
+    , optParam "deleted" updateSubscriptionItemDeleted
+    , hashParams "metadata" updateSubscriptionItemMetadata
+    , optParam "plan" updateSubscriptionItemPlan
+    , optParam "quantity" updateSubscriptionItemQuantity
+    ]
+
+data UpdateSubscription = UpdateSubscription
+  { -- updateSubscriptionCustomer :: Id Customer
+    updateSubscriptionItems :: [UpdateSubscriptionItem]
+  , updateSubscriptionCoupon :: Maybe (Id Coupon)
+  }
+
+subscriptionChanges :: UpdateSubscription
+subscriptionChanges = UpdateSubscription
+  { -- updateSubscriptionCustomer = cid
+    updateSubscriptionItems = []
+  , updateSubscriptionCoupon = Nothing
+  }
+
+instance ToForm UpdateSubscription where
+  toForm UpdateSubscription{..} = mconcat
+    [ -- reqParam "customer" updateSubscriptionCustomer
+      indexedArrayFormParams "items" updateSubscriptionItems
+    , optParam "coupon" updateSubscriptionCoupon
+    ]
+
+unsetCoupon :: Id Coupon
+unsetCoupon = Id ""
+
+updateSubscription :: (MonadStripe m, StripeResult Subscription subscription) => Id Subscription -> UpdateSubscription -> m subscription
+updateSubscription (Id subscriptionId) = stripePost (Proxy @Subscription) ("subscriptions/" <> encodeUtf8 subscriptionId)
+
+cancelSubscription :: (MonadStripe m, StripeResult Subscription subscription) => Id Subscription -> m subscription
+cancelSubscription (Id subscriptionId) = stripeDelete (Proxy @Subscription) ("subscriptions/" <> encodeUtf8 subscriptionId) []
+
+listSubscriptions :: (MonadStripe m, StripeResult (List Subscription) subscriptionList) => Pagination Subscription -> m subscriptionList
+listSubscriptions = stripeGet (Proxy @(List Subscription)) "subscriptions" . paginationParams
+
+
+-- Utils
+
+existingSubscriptionItemUpdate :: SubscriptionItem -> UpdateSubscriptionItem
+existingSubscriptionItemUpdate SubscriptionItem{..} = baseQuery
+  { updateSubscriptionItemId = Just subscriptionItemId
+  , updateSubscriptionItemPlan = Just $ planId subscriptionItemPlan
+  }

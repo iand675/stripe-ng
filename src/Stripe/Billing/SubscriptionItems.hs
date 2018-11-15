@@ -25,20 +25,20 @@ instance FromJSON SubscriptionItem where
 
 -- createSubscriptionItem
 
-retrieveSubscriptionItem :: (StripeMonad m, StripeResult SubscriptionItem subscriptionItem) => Id SubscriptionItem -> m subscriptionItem
+retrieveSubscriptionItem :: (MonadStripe m, StripeResult SubscriptionItem subscriptionItem) => Id SubscriptionItem -> m subscriptionItem
 retrieveSubscriptionItem (Id subscriptionItem) =
-  jsonGet (Proxy @SubscriptionItem) ("subscription_items/" <> encodeUtf8 subscriptionItem) []
+  stripeGet (Proxy @SubscriptionItem) ("subscription_items/" <> encodeUtf8 subscriptionItem) []
 
 -- updateSubscriptionItem
 -- deleteSubscriptionItem
 
 listAllSubscriptionItems ::
-     (StripeMonad m, StripeResult (List SubscriptionItem) subscriptionItemList)
+     (MonadStripe m, StripeResult (List SubscriptionItem) subscriptionItemList)
   => Id Subscription
   -> Pagination SubscriptionItem
   -> m subscriptionItemList
 listAllSubscriptionItems (Id subscriptionId) ps =
-  jsonGet
+  stripeGet
     (Proxy @(List SubscriptionItem))
     "subscription_items"
     (("subscription", Just $ encodeUtf8 subscriptionId) : paginationParams ps)

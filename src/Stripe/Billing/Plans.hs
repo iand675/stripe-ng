@@ -196,11 +196,11 @@ instance ToForm NewPlan where
 
 -- createPlan
 
-retrievePlan :: (StripeMonad m, StripeResult Plan plan) => Id Plan -> m plan
-retrievePlan (Id planId) = jsonGet (Proxy @Plan) ("plans/" <> encodeUtf8 planId) []
+retrievePlan :: (MonadStripe m, StripeResult Plan plan) => Id Plan -> m plan
+retrievePlan (Id planId) = stripeGet (Proxy @Plan) ("plans/" <> encodeUtf8 planId) []
 
 -- updatePlan
 -- deletePan
 
-listAllPlans :: (StripeMonad m, StripeResult (List Plan) planList) => Pagination Plan -> m planList
-listAllPlans = jsonGet (Proxy @(List Plan)) "plans" . paginationParams
+listAllPlans :: (MonadStripe m, StripeResult (List Plan) planList) => Pagination Plan -> m planList
+listAllPlans = stripeGet (Proxy @(List Plan)) "plans" . paginationParams

@@ -217,15 +217,15 @@ instance FromJSON Charge where
 
 -- createCharge
 
-retrieveCharge :: (StripeMonad m, StripeResult Charge charge) => Id Charge -> m charge
-retrieveCharge (Id chargeId) = jsonGet (Proxy @Charge) ("charges/" <> encodeUtf8 chargeId) []
+retrieveCharge :: (MonadStripe m, StripeResult Charge charge) => Id Charge -> m charge
+retrieveCharge (Id chargeId) = stripeGet (Proxy @Charge) ("charges/" <> encodeUtf8 chargeId) []
 
 -- updateCharge
 
 -- captureCharge
 
-listAllCharges :: (StripeMonad m, StripeResult (List Charge) chargeList) => m chargeList
-listAllCharges = jsonGet (Proxy @(List Charge)) "charges" []
+listAllCharges :: (MonadStripe m, StripeResult (List Charge) chargeList) => m chargeList
+listAllCharges = stripeGet (Proxy @(List Charge)) "charges" []
 
 data CreateCharge
 data UpdateCharge

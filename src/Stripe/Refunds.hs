@@ -25,7 +25,7 @@ data RefundReason
 instance FromJSON RefundReason where
   parseJSON = withText "RefundReason" $ \t -> case t of
     "duplicate" -> pure Duplicate
-    "fraudulent" -> pure Fraudulent
+    "fraudulent" -> pure Stripe.Refunds.Fraudulent
     "requested_by_customer" -> pure RequestedByCustomer
     _ -> fail ("Invalid RefundReason: " ++ show t)
 
