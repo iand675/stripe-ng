@@ -9,6 +9,7 @@ import Control.Lens.TH
 
 import Stripe.Balance
 import Stripe.Charges
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Disputes
 import Stripe.Files
