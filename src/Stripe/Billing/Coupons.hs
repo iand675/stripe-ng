@@ -1,4 +1,5 @@
 module Stripe.Billing.Coupons where
+import Stripe.Core
 import Stripe.Utils
 
 data CouponDuration

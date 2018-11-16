@@ -1,4 +1,5 @@
 module Stripe.Terminal.Locations where
+import Stripe.Core
 import Stripe.Utils
 
 data Location = Location

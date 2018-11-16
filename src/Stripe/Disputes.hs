@@ -1,6 +1,7 @@
 module Stripe.Disputes where
 import {-# SOURCE #-} Stripe.Balance
 import Stripe.Charges
+import Stripe.Core
 import Stripe.PaymentMethods.BankAccounts
 import Stripe.Utils
 

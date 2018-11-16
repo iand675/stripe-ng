@@ -1,6 +1,7 @@
 module Stripe.Connect.ApplicationFees where
 import Stripe.Connect.Account
 import Stripe.Connect.ApplicationFeeRefunds
+import Stripe.Core
 import Stripe.Charges
 import Stripe.Utils
 

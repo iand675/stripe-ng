@@ -1,5 +1,6 @@
 module Stripe.Terminal.PaymentIntents where
 
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Utils
 

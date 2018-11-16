@@ -1,4 +1,5 @@
 module Stripe.Payouts where
+import Stripe.Core
 import Stripe.PaymentMethods.BankAccounts
 import Stripe.Balance
 import Stripe.Utils

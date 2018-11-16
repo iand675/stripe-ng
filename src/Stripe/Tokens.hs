@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Stripe.Tokens where
+import Stripe.Core
 import Stripe.Customers
 import Stripe.PaymentMethods.BankAccounts
 import Stripe.PaymentMethods.Cards

@@ -1,5 +1,6 @@
 module Stripe.Refunds where
 import Stripe.Balance (BalanceTransaction)
+import Stripe.Core
 import Stripe.Charges
 import Stripe.Utils
 

@@ -1,5 +1,6 @@
 module Stripe.Connect.ExternalAccounts where
 
+import Stripe.Core
 import Stripe.PaymentMethods.BankAccounts
 import Stripe.Utils
 

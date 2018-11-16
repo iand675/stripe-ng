@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 module Stripe.Files where
+import Stripe.Core
 import {-# SOURCE #-} Stripe.FilesLinks
 import Stripe.Utils
 

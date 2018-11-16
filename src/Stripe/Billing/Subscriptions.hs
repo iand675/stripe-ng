@@ -3,6 +3,7 @@ import Stripe.Billing.Coupons
 import {-# SOURCE #-} Stripe.Billing.Discounts
 import Stripe.Billing.Plans
 import {-# SOURCE #-} Stripe.Billing.SubscriptionItems
+import Stripe.Core
 import {-# SOURCE #-} Stripe.Customers
 import Data.List.NonEmpty (NonEmpty)
 import Stripe.Utils

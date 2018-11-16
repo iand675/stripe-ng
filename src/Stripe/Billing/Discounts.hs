@@ -2,6 +2,7 @@ module Stripe.Billing.Discounts where
 import {-# SOURCE #-} Stripe.Customers
 import Stripe.Billing.Coupons
 import Stripe.Billing.Subscriptions
+import Stripe.Core
 import Stripe.Utils
 
 data Discount = Discount

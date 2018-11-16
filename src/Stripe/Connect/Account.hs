@@ -1,5 +1,6 @@
 module Stripe.Connect.Account where
 import Data.HashMap.Strict (HashMap)
+import Stripe.Core
 import Stripe.PaymentMethods.BankAccounts hiding (AccountType)
 import Stripe.PaymentMethods.Cards
 import Stripe.Files

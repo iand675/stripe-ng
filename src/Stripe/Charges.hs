@@ -1,6 +1,7 @@
 module Stripe.Charges where
 import {-# SOURCE #-} Stripe.Billing.Invoices
 import Stripe.Terminal.PaymentIntents
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Connect.Account
 import {-# SOURCE #-} Stripe.Disputes

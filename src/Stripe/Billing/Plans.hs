@@ -1,5 +1,6 @@
 module Stripe.Billing.Plans where
 import Stripe.Billing.Products
+import Stripe.Core
 import Stripe.Utils
 
 data AggregateUsage

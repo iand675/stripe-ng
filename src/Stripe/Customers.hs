@@ -2,6 +2,7 @@ module Stripe.Customers where
 import Stripe.Billing.Coupons
 import Stripe.Billing.Discounts
 import Stripe.Billing.Subscriptions
+import Stripe.Core
 import Stripe.Utils
 
 data Customer = Customer

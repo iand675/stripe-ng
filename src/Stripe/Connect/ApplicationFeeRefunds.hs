@@ -1,6 +1,7 @@
 module Stripe.Connect.ApplicationFeeRefunds where
 import {-# SOURCE #-} Stripe.Connect.ApplicationFees
 import Stripe.Balance
+import Stripe.Core
 import Stripe.Utils
 
 data FeeRefund = FeeRefund

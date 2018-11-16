@@ -1,6 +1,7 @@
 module Stripe.Billing.SubscriptionItems where
 import Stripe.Billing.Plans
 import {-# SOURCE #-} Stripe.Billing.Subscriptions
+import Stripe.Core
 import Stripe.Utils
 
 data SubscriptionItem = SubscriptionItem

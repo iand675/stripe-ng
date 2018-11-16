@@ -1,6 +1,7 @@
 module Stripe.Connect.TransferReversals where
 import Stripe.Balance
 import Stripe.Connect.Transfers
+import Stripe.Core
 import Stripe.Utils
 
 data TransferReversal = TransferReversal

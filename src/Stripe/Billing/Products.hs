@@ -1,5 +1,5 @@
 module Stripe.Billing.Products where
-
+import Stripe.Core
 import Stripe.Utils
 
 data PackageDimensions = PackageDimensions

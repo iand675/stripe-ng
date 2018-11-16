@@ -1,4 +1,5 @@
 module Stripe.Billing.InvoiceItems where
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Billing.Invoices
 import Stripe.Billing.Plans

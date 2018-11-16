@@ -1,4 +1,5 @@
 module Stripe.PaymentMethods.Cards where
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Utils
 

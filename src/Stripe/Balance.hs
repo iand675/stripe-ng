@@ -1,5 +1,6 @@
 module Stripe.Balance where
 import Stripe.Charges
+import Stripe.Core
 import Stripe.Utils
 
 -- TODO Better source_type support

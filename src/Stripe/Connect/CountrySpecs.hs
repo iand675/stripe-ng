@@ -1,5 +1,6 @@
 module Stripe.Connect.CountrySpecs where
 import Data.HashMap.Strict (HashMap)
+import Stripe.Core
 import Stripe.Utils
 
 data CountrySpec = CountrySpec

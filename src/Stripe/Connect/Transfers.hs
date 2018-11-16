@@ -1,5 +1,6 @@
 module Stripe.Connect.Transfers where
 import Stripe.Balance (BalanceTransaction)
+import Stripe.Core
 import Stripe.Utils
 
 data TransferSourceType

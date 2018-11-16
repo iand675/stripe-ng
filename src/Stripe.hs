@@ -8,4 +8,6 @@ module Stripe
   , BaseQuery(..)
   ) where
 
+import Stripe.Core
+import Stripe.Errors
 import Stripe.Utils

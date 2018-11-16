@@ -1,4 +1,5 @@
 module Stripe.Orders where
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Charges
 import Stripe.Utils

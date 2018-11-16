@@ -1,5 +1,6 @@
 module Stripe.Billing.Invoices where
 import Stripe.Charges
+import Stripe.Core
 import Stripe.Customers
 import Stripe.Billing.Discounts
 import Stripe.Billing.Subscriptions

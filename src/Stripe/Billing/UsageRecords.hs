@@ -1,5 +1,6 @@
 module Stripe.Billing.UsageRecords where
 import Stripe.Billing.SubscriptionItems
+import Stripe.Core
 import Stripe.Utils
 
 data UsageRecord = UsageRecord
