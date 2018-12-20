@@ -109,7 +109,7 @@ data Invoice = Invoice
   , invoiceReceiptNumber :: Maybe Text
   , invoiceStartingBalance :: Integer
   , invoiceStatementDescriptor :: Maybe Text
-  , invoiceSubscription :: Id Subscription
+  , invoiceSubscription :: Maybe (Id Subscription)
   , invoiceSubtotal :: Word
   , invoiceTax :: Integer
   , invoiceTaxPercent :: Maybe Double
@@ -155,7 +155,7 @@ instance FromJSON Invoice where
       <*> opt "receipt_number"
       <*> req "starting_balance"
       <*> opt "statement_descriptor"
-      <*> req "subscription"
+      <*> opt "subscription"
       <*> req "subtotal"
       <*> req "tax"
       <*> opt "tax_percent"
