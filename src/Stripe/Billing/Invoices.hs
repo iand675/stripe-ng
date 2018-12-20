@@ -198,13 +198,40 @@ instance BaseQuery FinalizeInvoice where
 finalizeInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Invoice -> FinalizeInvoice -> m invoice
 finalizeInvoice (Id invoiceId) = stripePost (Proxy @Invoice) ("invoices/" <> encodeUtf8 invoiceId)
 
+data PayInvoice = PayInvoice
+  { payInvoiceSource :: Maybe Text -- TODO tighten type here
+  }
+
+instance BaseQuery PayInvoice where
+  baseQuery = PayInvoice
+    Nothing
+
+instance ToForm PayInvoice where
+  toForm PayInvoice{..} = mconcat
+    [ optParam "source" payInvoiceSource
+    ]
+
+payInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Invoice -> PayInvoice -> m invoice
+payInvoice (Id invoiceId) = stripePost (Proxy @Invoice) ("invoices/" <> encodeUtf8 invoiceId <> "/pay")
+
 {-
-payInvoice
 sendManualPaymentInvoice
 voidInvoice
 markInvoiceUncollectible
 retrieveInvoiceLineItems
-retrieveUpcomingInvoice
+-}
+
+data UpcomingInvoice = UpcomingInvoice
+  { upcomingInvoiceCustomer :: Id Customer
+  }
+
+upcomingInvoice :: Id Customer -> UpcomingInvoice
+upcomingInvoice = UpcomingInvoice
+
+retrieveUpcomingInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Customer -> m invoice
+retrieveUpcomingInvoice (Id customerId) = stripeGet (Proxy @Invoice) "invoices/upcoming" [("customer", Just $ encodeUtf8 customerId)]
+
+{-
 retrieveUpcomingInvoiceLineItems
 listAllInvoices
 -}
