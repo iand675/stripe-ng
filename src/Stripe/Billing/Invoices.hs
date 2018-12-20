@@ -29,11 +29,11 @@ data InvoiceLine = InvoiceLine
   , invoiceLineLiveMode :: Bool
   , invoiceLineMetadata :: Metadata
   , invoiceLinePeriod :: InvoiceLinePeriod
-  , invoiceLinePlan :: Plan
+  , invoiceLinePlan :: Maybe Plan
   , invoiceLineProration :: Bool
   , invoiceLineQuantity :: Int
-  , invoiceLineSubscription :: Id Subscription
-  , invoiceLineSubscriptionItem :: Id SubscriptionItem
+  , invoiceLineSubscription :: Maybe (Id Subscription)
+  , invoiceLineSubscriptionItem :: Maybe (Id SubscriptionItem)
   , invoiceLineType_ :: Text
   } deriving (Show, Eq, Generic, Typeable)
 
@@ -50,11 +50,11 @@ instance FromJSON InvoiceLine where
       <*> req "livemode"
       <*> req "metadata"
       <*> req "period"
-      <*> req "plan"
+      <*> opt "plan"
       <*> req "proration"
       <*> req "quantity"
-      <*> req "subscription"
-      <*> req "subscription_item"
+      <*> opt "subscription"
+      <*> opt "subscription_item"
       <*> req "type"
 
 data BillingReason
@@ -114,7 +114,7 @@ data Invoice = Invoice
   , invoiceTax :: Integer
   , invoiceTaxPercent :: Maybe Double
   , invoiceTotal :: Word
-  , invoiceWebhooksDeliveredAt :: Timestamp
+  , invoiceWebhooksDeliveredAt :: Maybe Timestamp
   } deriving (Show, Eq, Generic, Typeable)
 
 instance FromJSON Invoice where
@@ -160,7 +160,7 @@ instance FromJSON Invoice where
       <*> req "tax"
       <*> opt "tax_percent"
       <*> req "total"
-      <*> req "webhooks_delivered_at"
+      <*> opt "webhooks_delivered_at"
 
 data NewInvoice = NewInvoice
   { newInvoiceCustomer :: Id Customer
@@ -214,13 +214,14 @@ instance ToForm PayInvoice where
 payInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Invoice -> PayInvoice -> m invoice
 payInvoice (Id invoiceId) = stripePost (Proxy @Invoice) ("invoices/" <> encodeUtf8 invoiceId <> "/pay")
 
+
 {-
-sendManualPaymentInvoice
 voidInvoice
 markInvoiceUncollectible
 retrieveInvoiceLineItems
 -}
 
+{-
 data UpcomingInvoice = UpcomingInvoice
   { upcomingInvoiceCustomer :: Id Customer
   }
@@ -228,8 +229,10 @@ data UpcomingInvoice = UpcomingInvoice
 upcomingInvoice :: Id Customer -> UpcomingInvoice
 upcomingInvoice = UpcomingInvoice
 
+TODO these require a different type that doesn't have the 'id' field
 retrieveUpcomingInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Customer -> m invoice
 retrieveUpcomingInvoice (Id customerId) = stripeGet (Proxy @Invoice) "invoices/upcoming" [("customer", Just $ encodeUtf8 customerId)]
+-}
 
 {-
 retrieveUpcomingInvoiceLineItems
