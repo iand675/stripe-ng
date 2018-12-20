@@ -162,11 +162,47 @@ instance FromJSON Invoice where
       <*> req "total"
       <*> req "webhooks_delivered_at"
 
+data NewInvoice = NewInvoice
+  { newInvoiceCustomer :: Id Customer
+  } deriving (Show, Eq, Generic, Typeable)
+
+instance ToForm NewInvoice where
+  toForm NewInvoice{..} = mconcat
+    [ reqParam "customer" newInvoiceCustomer
+    ]
+
+newInvoice :: Id Customer -> NewInvoice
+newInvoice = NewInvoice
+
+createInvoice :: (MonadStripe m, StripeResult Invoice invoice) => NewInvoice -> m invoice
+createInvoice = stripePost (Proxy @Invoice) "invoices"
+
 {-
-createInvoice
 retrieveInvoice
 updateInvoice
+deleteDraftInvoice
+-}
+
+data FinalizeInvoice = FinalizeInvoice
+  { finalizeInvoiceAutoAdvance :: Maybe Bool
+  } deriving (Show, Eq, Generic, Typeable)
+
+instance ToForm FinalizeInvoice where
+  toForm FinalizeInvoice{..} = mconcat
+    [ optParam "auto_advance" finalizeInvoiceAutoAdvance
+    ]
+
+instance BaseQuery FinalizeInvoice where
+  baseQuery = FinalizeInvoice Nothing
+
+finalizeInvoice :: (MonadStripe m, StripeResult Invoice invoice) => Id Invoice -> FinalizeInvoice -> m invoice
+finalizeInvoice (Id invoiceId) = stripePost (Proxy @Invoice) ("invoices/" <> encodeUtf8 invoiceId)
+
+{-
 payInvoice
+sendManualPaymentInvoice
+voidInvoice
+markInvoiceUncollectible
 retrieveInvoiceLineItems
 retrieveUpcomingInvoice
 retrieveUpcomingInvoiceLineItems
