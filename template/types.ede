@@ -1,0 +1,132 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE PolyKinds #-}
+-- Derived from OpenAPI spec
+module {{ moduleName }} where
+
+-- TODO all of this needs to be qualified to account for generated output causing conflicts
+import Control.Applicative ((<|>))
+import Control.DeepSeq (NFData(..))
+import Control.Lens.TH
+import Data.Aeson (ToJSON1(..), FromJSON1(..), toJSON1, parseJSON1)
+import Data.Binary (Binary(..))
+import Data.Data (Data(..))
+import Data.Functor.Const
+import Data.Functor.Classes
+import qualified Data.Sum
+import GHC.Generics (Generic)
+import GHC.Exts (IsString(..), IsList(..))
+import Text.Printf (PrintfArg(..))
+import OpenAPI.Support hiding (Error(..))
+
+-- TODO All objects going into qery string need instance of QueryValueLike based on parameter format
+
+-- TODO stripe specific, move out
+newtype Id (a :: k) = Id { fromId :: Text }
+  deriving (Show, Eq, Ord, Data, Read, IsString, Semigroup, Monoid, PrintfArg, Binary, NFData, IsList, ToJSON, FromJSON)
+
+data Expandable (fs :: [* -> *])
+  = Unexpanded (Id fs)
+  | Expanded (AnyOf fs)
+
+instance Data.Sum.Apply ToJSON1 fs => ToJSON (Expandable fs) where
+  toJSON (Unexpanded k) = toJSON k
+  toJSON (Expanded s) = toJSON1 s
+
+instance FromJSON1 (Data.Sum.Sum fs) => FromJSON (Expandable fs) where
+  parseJSON v = (Unexpanded <$> parseJSON v) <|> (Expanded <$> parseJSON1 v)
+deriving instance Data.Sum.Apply Show1 a => Show (Expandable a)
+deriving instance Data.Sum.Apply Eq1 a => Eq (Expandable a)
+deriving instance (Data.Sum.Apply Eq1 a, Data.Sum.Apply Ord1 a) => Ord (Expandable a)
+-- , Eq, Ord)
+
+{% for enum in enums %}
+data {{enum.value.name}}
+  {% for option in enum.value.options %}
+  {% if option.first %}= {% else %}| {% endif %}{{option.value.name}}
+  {% endfor %}
+  deriving (Show, Eq, Ord, Enum, Bounded, Generic)
+
+instance ToJSON {{enum.value.name}} where
+  toJSON e = Text $ case e of
+  {% for option in enum.value.options %}
+    {{option.value.name}} -> "{{option.value.original}}"
+  {% endfor %}
+
+instance FromJSON {{enum.value.name}} where
+  parseJSON = withText "{{enum.value.name}}" $ \case
+  {% for option in enum.value.options %}
+    "{{option.value.original}}" -> pure {{option.value.name}}
+  {% endfor %}
+    str -> fail (show str <> " is not a known valid option for {{enum.value.name}}")
+
+{% endfor %}
+
+{% for type in types %}
+{% let haskellName = type.value.typeName %}
+-- Describes: "{{type.value.typeOriginalName}}"
+{% if type.value.typeDescription %}{- | {{type.value.typeDescription}} -}{% endif %}
+data {{type.value.typeName}}
+  {% for constructor in type.value.constructors %}
+  {% if constructor.first %}= {% else %}| {% endif %}{{constructor.value.constructorName}}
+    {% for field in constructor.value.constructorFields %}
+    {% if field.first %}{ {% else %}, {% endif %}{{field.value.fieldName}} :: {% if field.value.fieldNullable %}Maybe ({{field.value.fieldType}}){% else %}{{field.value.fieldType}}{% endif %}{% if field.value.fieldDescription %}
+    {- ^ {{field.value.fieldDescription}} -}{% endif %}
+    {% else %}
+    {
+    {% endfor %}
+    } deriving (Show, Eq, Generic)
+  {% endfor %}
+
+instance FromJSON {{type.value.typeName}} where
+  parseJSON = withObject "{{type.value.typeName}}" parseCtors
+    where
+      parseCtors o = {% for constructor in type.value.constructors %}{% if !constructor.first %} <|> {% endif %}parse{{constructor.value.constructorName}} o{% endfor %}
+      {% for constructor in type.value.constructors %}
+      parse{{constructor.value.constructorName}} o = do
+        {% for field in constructor.value.constructorFields %}
+        {{field.value.fieldName}} <- o {% if field.value.fieldNullable %}.:?{% else %}.:{% endif %} "{{field.value.fieldOriginalName}}"
+        {% endfor %}
+        pure {{constructor.value.constructorName}}{% if (constructor.value.constructorFields | length) > 0 %}{..}{% endif %}
+      {% endfor %}
+
+instance ToJSON {{type.value.typeName}} where
+  {% for constructor in type.value.constructors %}
+  toJSON {{constructor.value.constructorName}}{% if (constructor.value.constructorFields | length) > 0 %}{..}{% endif %} = object
+    (
+      {% for field in constructor.value.constructorFields %}
+      {% if field.value.fieldNullable %}
+      (fmap ("{{field.value.fieldOriginalName}}" .=) {{field.value.fieldName}}) >?>
+      {% else %}
+      ("{{field.value.fieldOriginalName}}" .= {{field.value.fieldName}}) :
+      {% endif %}
+      {% endfor %}
+      []
+    )
+  {% endfor %}
+  {% for constructor in type.value.constructors %}
+  toEncoding {{constructor.value.constructorName}}{% if (constructor.value.constructorFields | length) > 0 %}{..}{% endif %} = pairs (
+      {% for field in constructor.value.constructorFields %}
+      {% if field.value.fieldNullable %}
+      maybe mempty ("{{field.value.fieldOriginalName}}" .=) {{field.value.fieldName}}{% if !field.last %} <>{% endif %}
+      {% else %}
+      "{{field.value.fieldOriginalName}}" .= {{field.value.fieldName}}{% if !field.last %} <>{% endif %}
+      {% endif %}
+      {% else %}
+      mempty
+      {% endfor %}
+      )
+  {% endfor %}
+
+{% endlet %}
+{% endfor %}
+
+{% for type in types %}
+makeFields ''{{type.value.typeName}}
+{% endfor %}

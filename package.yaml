@@ -22,12 +22,17 @@ description:         Please see the README on GitHub at <https://github.com/iand
 dependencies:
 - base >= 4.7 && < 5
 - aeson
+- aeson-pretty
+- attoparsec
+- binary
 - bytestring
+- deepseq
 - hashable
 - mtl
 - text
 - lens
 - mtl
+- transformers
 - unordered-containers
 - http-api-data
 - http-client
@@ -42,6 +47,9 @@ dependencies:
 - tagged
 - time
 - vector
+- fastsum
+- fused-effects-lens
+- containers
 
 default-extensions:
   - DeriveGeneric
@@ -66,7 +74,14 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - casing
     - stripe-ng
+    - fused-effects
+    - pretty-show
+    - pandoc
+    - ede
+    - text-manipulate
+    - lens
 
 tests:
   stripe-ng-test:

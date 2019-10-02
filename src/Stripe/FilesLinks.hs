@@ -1,4 +1,3 @@
--- TODO rename module to Stripe.FileLinks
 module Stripe.FilesLinks where
 
 import Stripe.Core
