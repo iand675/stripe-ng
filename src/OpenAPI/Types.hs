@@ -11,6 +11,8 @@
 module OpenAPI.Types where
 import Control.Applicative hiding (optional)
 import qualified Control.Applicative as App
+import Control.Lens hiding ((.=))
+import Control.Lens.Plated
 import Control.Lens.TH
 import Control.Monad.State.Strict
 import Data.Aeson hiding (Encoding)
@@ -18,13 +20,16 @@ import qualified Data.Aeson.Encoding as E
 import Data.Aeson.Types hiding (Encoding)
 import qualified Data.Attoparsec.Text as Parse
 import qualified Data.ByteString.Char8 as C
+import Data.Char (digitToInt)
 import Data.Hashable
-import Data.Maybe (fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.String
 import Data.Text (Text)
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import qualified Text.EDE as EDE
+import qualified Text.EDE.Filters as EDE
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import GHC.Generics (Generic)
@@ -189,19 +194,27 @@ instance FromJSON License where
     licenseExtensions <- takeExtensions
     pure License{..}
 
-newtype Reference = Reference Text
-  deriving (Show, Eq, Ord)
+newtype Reference a = Reference Text
+  deriving (Show, Eq, Ord, Functor)
 
-instance ToJSON Reference where
+instance ToJSON (Reference a) where
   toJSON (Reference r) = object [ "$ref" .= r ]
 
-instance FromJSON Reference where
+instance FromJSON (Reference a) where
   parseJSON = withObject "Reference" $ killer $ Reference <$> require "$ref"
 
 data Referenceable a
-  = Ref Reference
+  = Ref (Reference a)
   | Obj a
   deriving (Show, Eq, Functor, Ord)
+
+instance Foldable Referenceable where
+  foldr f z (Ref r) = z
+  foldr f z (Obj a) = f a z
+
+instance Traversable Referenceable where
+  traverse f (Ref (Reference r)) = pure $ Ref $ Reference r
+  traverse f (Obj a) = Obj <$> f a
 
 instance ToJSON a => ToJSON (Referenceable a) where
   toJSON (Ref r) = toJSON r
@@ -509,24 +522,34 @@ emptySchema = Schema
 
 -- TODO this needs liberal doses of quickcheck applied.
 instance ToJSON Schema where
-  toJSON Schema{..} = object
-    [ "properties" .= schemaProperties
-    , "title" .= schemaTitle
-    , "description" .= schemaDescription
-    , "type" .= schemaType_
-    , "required" .= schemaRequired
-    , "anyOf" .= schemaAnyOf
-    , "items" .= schemaItems
-    , "minLength" .= schemaMinLength
-    , "maxLength" .= schemaMaxLength
-    , "format" .= schemaFormat
-    , "enum" .= schemaEnum
-    , "additionalProperties" .= schemaAdditionalProperties
-    , "pattern" .= schemaPattern
-    , "nullable" .= schemaNullable
-    , "readOnly" .= schemaReadOnly
-    , "writeOnly" .= schemaWriteOnly
-    ]
+  toJSON Schema{..} = object (baseFields ++ H.toList schemaExtensions)
+    where
+      baseFields = catMaybes
+        [ if H.null schemaProperties
+          then Nothing
+          else Just ("properties" .= schemaProperties)
+        , ("title" .=) <$> schemaTitle
+        , ("description" .=) <$> schemaDescription
+        , ("type" .=) <$> schemaType_
+        , if V.null schemaRequired
+          then Nothing
+          else Just ("required" .= schemaRequired)
+        , if V.null schemaAnyOf
+          then Nothing
+          else Just ("anyOf" .= schemaAnyOf)
+        , ("items" .=) <$> schemaItems
+        , ("minLength" .=) <$> schemaMinLength
+        , ("maxLength" .=) <$> schemaMaxLength
+        , ("format" .=) <$> schemaFormat
+        , ("enum" .=) <$> schemaEnum
+        , ("additionalProperties" .=) <$> schemaAdditionalProperties
+        , ("pattern" .=) <$> schemaPattern
+        , if schemaNullable
+          then Just ("nullable" .= schemaNullable)
+          else Nothing
+        , ("readOnly" .=) <$> schemaReadOnly
+        , ("writeOnly" .=) <$> schemaWriteOnly
+        ]
 
 instance FromJSON Schema where
   parseJSON = withObject "Schema" $ killer $ do
@@ -676,8 +699,62 @@ instance FromJSON RequestBody where
   parseJSON = withObject "RequestBody" $ killer $
     RequestBody <$> require "content" <*> require "required"
 
+data StatusPatternElem
+  = Digit Int
+  | Wildcard
+  deriving (Eq, Generic)
+
+instance Hashable StatusPatternElem
+
+instance Show StatusPatternElem where
+  show = \case
+    Digit i -> show i
+    Wildcard -> "X"
+
+data ResponseKey
+  = ConstStatus !Int
+  | StatusPatternResponse StatusPatternElem StatusPatternElem StatusPatternElem
+  | DefaultResponse
+  deriving (Eq, Generic)
+
+instance Hashable ResponseKey
+
+instance Show ResponseKey where
+  show = \case
+    ConstStatus i -> show i
+    StatusPatternResponse h m l -> concatMap show [h, m, l]
+    DefaultResponse -> "default"
+
+instance ToJSON ResponseKey where
+  toJSON = toJSON . T.pack . show
+
+instance ToJSONKey ResponseKey where
+  toJSONKey = toJSONKeyText (T.pack . show)
+
+instance FromJSON ResponseKey where
+  parseJSON = withText "Response Key" $ \t -> either fail pure $ parseResponseKey t
+
+instance FromJSONKey ResponseKey where
+  fromJSONKey = FromJSONKeyTextParser $ \t -> either fail pure $ parseResponseKey t
+
+instance EDE.Unquote ResponseKey
+
+parseResponseKey :: Text -> Either String ResponseKey
+parseResponseKey = Parse.parseOnly parser
+  where
+    parseChar = fmap (Digit . digitToInt) Parse.digit <|> (Parse.char 'X' *> pure Wildcard)
+    parseConstOrPattern = do
+      high <- parseChar
+      middle <- parseChar
+      low <- parseChar
+      case (high, middle, low) of
+        (Digit h, Digit m, Digit l) -> pure $ ConstStatus $ (h * 100) + (m * 10) + l
+        _ -> pure $ StatusPatternResponse high middle low
+
+    parser = (Parse.string "default" *> pure DefaultResponse) <|> parseConstOrPattern
+
 data Responses = Responses
-  { responsesResponses :: H.HashMap Text Response
+  { responsesResponses :: H.HashMap ResponseKey Response
   } deriving (Show, Eq)
 
 instance ToJSON Responses where
@@ -685,6 +762,7 @@ instance ToJSON Responses where
 
 instance FromJSON Responses where
   parseJSON v = Responses <$> parseJSON v
+
 
 data Response = Response
   { responseContent :: RefMap MediaType
@@ -780,3 +858,26 @@ makeFields ''Responses
 makeFields ''Response
 makeFields ''MediaType
 makeFields ''Encoding
+
+instance Plated Schema where
+  plate f Schema{..} = Schema <$>
+    (traverse (traverse f) schemaProperties) <*>
+    (pure schemaTitle) <*>
+    (pure schemaDescription) <*>
+    (pure schemaType_) <*>
+    (pure schemaRequired) <*>
+    (traverse (traverse f) schemaAnyOf) <*>
+    (traverse (traverse f) schemaItems) <*>
+    (pure schemaMinLength) <*>
+    (pure schemaMaxLength) <*>
+    (pure schemaFormat) <*>
+    (pure schemaEnum) <*>
+    (traverse (\ps -> case ps of
+         AdditionalPropertiesToggle _ -> pure ps
+         AdditionalPropertiesSchema rs -> AdditionalPropertiesSchema <$> traverse f rs
+     ) schemaAdditionalProperties) <*>
+    (pure schemaPattern) <*>
+    (pure schemaNullable) <*>
+    (pure schemaReadOnly) <*>
+    (pure schemaWriteOnly) <*>
+    (pure schemaExtensions)

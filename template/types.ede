@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -12,39 +11,17 @@ module {{ moduleName }} where
 
 -- TODO all of this needs to be qualified to account for generated output causing conflicts
 import Control.Applicative ((<|>))
-import Control.DeepSeq (NFData(..))
 import Control.Lens.TH
 import Data.Aeson (ToJSON1(..), FromJSON1(..), toJSON1, parseJSON1)
-import Data.Binary (Binary(..))
 import Data.Data (Data(..))
 import Data.Functor.Const
-import Data.Functor.Classes
 import qualified Data.Sum
 import GHC.Generics (Generic)
-import GHC.Exts (IsString(..), IsList(..))
-import Text.Printf (PrintfArg(..))
 import OpenAPI.Support hiding (Error(..))
+import OpenAPI.Support.Stripe
 
 -- TODO All objects going into qery string need instance of QueryValueLike based on parameter format
 
--- TODO stripe specific, move out
-newtype Id (a :: k) = Id { fromId :: Text }
-  deriving (Show, Eq, Ord, Data, Read, IsString, Semigroup, Monoid, PrintfArg, Binary, NFData, IsList, ToJSON, FromJSON)
-
-data Expandable (fs :: [* -> *])
-  = Unexpanded (Id fs)
-  | Expanded (AnyOf fs)
-
-instance Data.Sum.Apply ToJSON1 fs => ToJSON (Expandable fs) where
-  toJSON (Unexpanded k) = toJSON k
-  toJSON (Expanded s) = toJSON1 s
-
-instance FromJSON1 (Data.Sum.Sum fs) => FromJSON (Expandable fs) where
-  parseJSON v = (Unexpanded <$> parseJSON v) <|> (Expanded <$> parseJSON1 v)
-deriving instance Data.Sum.Apply Show1 a => Show (Expandable a)
-deriving instance Data.Sum.Apply Eq1 a => Eq (Expandable a)
-deriving instance (Data.Sum.Apply Eq1 a, Data.Sum.Apply Ord1 a) => Ord (Expandable a)
--- , Eq, Ord)
 
 {% for enum in enums %}
 data {{enum.value.name}}
@@ -76,7 +53,7 @@ data {{type.value.typeName}}
   {% for constructor in type.value.constructors %}
   {% if constructor.first %}= {% else %}| {% endif %}{{constructor.value.constructorName}}
     {% for field in constructor.value.constructorFields %}
-    {% if field.first %}{ {% else %}, {% endif %}{{field.value.fieldName}} :: {% if field.value.fieldNullable %}Maybe ({{field.value.fieldType}}){% else %}{{field.value.fieldType}}{% endif %}{% if field.value.fieldDescription %}
+    {% if field.first %}{ {% else %}, {% endif %}{{field.value.fieldName}} :: {{field.value.fieldType}}{% if field.value.fieldDescription %}
     {- ^ {{field.value.fieldDescription}} -}{% endif %}
     {% else %}
     {

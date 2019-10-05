@@ -45,14 +45,18 @@ dependencies:
 - pretty-show
 - scientific
 - tagged
+- text-manipulate
 - time
 - vector
 - fastsum
+- fused-effects
 - fused-effects-lens
 - containers
 
 default-extensions:
+  - ConstraintKinds
   - DeriveGeneric
+  - GeneralisedNewtypeDeriving
   - OverloadedStrings
   - QuasiQuotes
   - RecordWildCards
@@ -61,6 +65,13 @@ default-extensions:
 
 library:
   source-dirs: src
+  exposed-modules:
+  - OpenAPI.Gen
+  - OpenAPI.Gen.Reader
+  - OpenAPI.Gen.Writer
+  - OpenAPI.Gen.Stripe
+  - OpenAPI.Types
+  other-modules: []
   when:
   - condition: flag(strict-json-check)
     cpp-options: -DSTRICT_JSON_CHECK
@@ -75,12 +86,12 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - casing
+    - directory
+    - filepath
     - stripe-ng
-    - fused-effects
     - pretty-show
     - pandoc
     - ede
-    - text-manipulate
     - lens
 
 tests:

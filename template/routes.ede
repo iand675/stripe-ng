@@ -82,6 +82,21 @@ instance RequestBuilder {{typeName}} where
     {% endif %}
     {% endlet %}
 
+data {{typeName}}Response
+{% for resp in endpoint.value.endpointFlatResponses %}
+  {% if resp.first %}= {% else %}| {% endif %}{{typeName}}Response{{resp.value.suffix}} ({{resp.value.type}})
+{% endfor %}
+
+type instance KnownResponse {{typeName}} = {{typeName}}Response
+
+instance FromHttpResponse {{typeName}}Response where
+  decodeResponse resp
+{% for status in endpoint.value.endpointNestedResponses %}
+    | {{status.key | patternPredicate}} (responseStatus resp) =
+{% include "_include/content-type-match.ede" with match=status.value %}
+{% endfor %}
+    | otherwise = throwError ("Unhandled status code in response." :: String)
+
 
 
 {-

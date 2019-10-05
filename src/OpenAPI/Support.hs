@@ -137,6 +137,8 @@ deriving instance (Show (DecodingError resp)) => Show (HttpResponseError resp)
 
 instance (Typeable resp, Show (DecodingError resp)) => Exception (HttpResponseError resp)
 
+type family KnownResponse req :: *
+
 class FromHttpResponse resp where
   type DecodingError resp :: *
   type DecodingError resp = String
