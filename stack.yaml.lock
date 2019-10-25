@@ -32,6 +32,13 @@ packages:
       sha256: 1f74dac14478572e175bf8e12de4500711c47fdcc56cb630eae3732e0410aa1d
   original:
     hackage: fastsum-0.1.1.0
+- completed:
+    hackage: http-media-0.8.0.0@sha256:05215cafddb1a34cd70b3f1247953a753a4256a87228b68b8e748cdffa827363,4110
+    pantry-tree:
+      size: 2127
+      sha256: af6f4bfa3ee48a846c35e22aeec5b86c052eb05d6b25f6b0c2713bf0760bc80c
+  original:
+    hackage: http-media-0.8.0.0
 snapshots:
 - completed:
     size: 495801

@@ -42,6 +42,7 @@ extra-deps:
 - fused-effects-0.5.0.1
 - fused-effects-lens-0.2.0.0
 - fastsum-0.1.1.0
+- http-media-0.8.0.0
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

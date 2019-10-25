@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -70,9 +71,13 @@ module OpenAPI.Support
 
 import Data.Aeson as X
 import Control.Applicative (Alternative(..))
+import Control.Effect
 import Control.Effect.Carrier
 import Control.Effect.Error
+import Control.Effect.Interpret
+import Control.Effect.Interpose
 import Control.Effect.Reader
+import Control.Effect.State
 import Control.Exception (Exception(..), SomeException)
 import Control.Monad (MonadPlus(..))
 import Control.Monad.Trans
@@ -95,7 +100,10 @@ import Data.Typeable
 import Data.Vector (Vector)
 import Data.Void
 import Data.Proxy
-import GHC.Generics (Generic, Generic1)
+import GHC.Generics
+       (C1, D1, Generic, Generic1, Meta(MetaCons), Rep1, from1,
+        unM1)
+import qualified GHC.Generics as G
 import GHC.TypeLits
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as HTTP
@@ -165,7 +173,7 @@ data Http (m :: * -> *) k
   deriving stock (Functor, Generic1)
   deriving anyclass (HFunctor, Effect)
 
-
+instance HasConstructorName (Http m)
 -- data Server
 
 http ::
@@ -191,6 +199,42 @@ http r = do
         }
   r <- send $ SendRequest (HttpRequest builtReq) pure
   decodeResponse r
+
+data StripeRequest (m :: * -> *) k
+  = StripeRequest HttpRequest (HttpResponse -> m k)
+  deriving stock (Functor, Generic1)
+  deriving anyclass (HFunctor, Effect)
+
+stripe :: (Monad m, Carrier sig m, Member Http sig) => InterpretC StripeRequest m a -> m a
+stripe = runInterpret (\(StripeRequest req f) -> send $ SendRequest req f)
+
+class HasConstructorName f where
+  constructorName :: f a -> String
+  default constructorName :: (Generic1 f, HasConstructorName (Rep1 f)) => f a -> String
+  constructorName = constructorName . from1
+
+instance HasConstructorName c1 => HasConstructorName (D1 meta c1) where
+  constructorName = constructorName . unM1
+
+instance (HasConstructorName l, HasConstructorName r) => HasConstructorName (l G.:+: r) where
+  constructorName (G.L1 l) = constructorName l
+  constructorName (G.R1 r) = constructorName r
+
+instance KnownSymbol str => HasConstructorName (C1 ('MetaCons str fixity hasSelectors) s1) where
+  constructorName _ = symbolVal (Proxy @str)
+
+logOp ::
+     (Member eff sig, MonadIO m, Monad m, Carrier sig m, HasConstructorName (eff m))
+  => InterposeC eff m a
+  -> m a
+logOp = runInterpose $ \op -> do
+  -- started <- registerStart op
+  liftIO $ putStrLn "start!"
+  liftIO $ putStrLn $ constructorName op
+  r <- send op
+  liftIO $ putStrLn "finished!"
+  pure r
+
 
 type OPTIONS = "OPTIONS"
 type GET = "GET"
@@ -249,7 +293,7 @@ instance
 
     R other -> HttpC (eff (hmap runHttp other))
 
--- The 'LogStdoutC' runner.
+-- The 'HttpC' runner.
 runHttp ::
      HttpC m a
   -> m a
@@ -273,3 +317,12 @@ idempotentHttp ::
 idempotentHttp (IdempotencyKey k) r = local
   (\(HttpRequest r) -> HttpRequest $ r { HTTP.requestHeaders = ("Idempotency-Key", k) : HTTP.requestHeaders r})
   (http r)
+
+-- deriving instance (Functor m) => Generic1 (State s m)
+instance HasConstructorName (State s m)
+
+example4 :: IO (Int, ())
+example4 = runM . runReader ("hello" :: String) . runState 0 . logOp @(State Int) $ do
+  list <- ask
+  liftIO (putStrLn list)
+  put (length list)

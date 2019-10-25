@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -27,6 +26,7 @@ import Data.List
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe, isJust)
+import qualified Data.Map as M
 import Data.Hashable (Hashable)
 import qualified Data.HashMap.Strict as H
 import qualified Data.Set as S
@@ -46,53 +46,26 @@ import System.Directory
 import System.FilePath
 import Text.EDE
 import Text.EDE.Filters
-import Text.Pandoc.Class
-import Text.Pandoc.Extensions
-import Text.Pandoc.Options (def, ReaderOptions(..), WriterOptions(..))
-import Text.Pandoc.Readers.CommonMark
-import Text.Pandoc.Readers.HTML
-import Text.Pandoc.Writers.Haddock
 
 import OpenAPI.Gen
+import OpenAPI.Gen.Coders
+import OpenAPI.Gen.Identifier
 import OpenAPI.Gen.Stripe
 import OpenAPI.Gen.Reader
 import OpenAPI.Gen.Writer
+import OpenAPI.TemplateHelpers
 import OpenAPI.Types
 
 
--- TODO XML support, additional content types
+main :: IO ()
+main = readSpec >>= go
 
-
-
--- DSL layout
--- provide type family to add support for extensions anywhere they are able to be annotated
--- register type
---   * descend into monad stack that supports reading/writing fields, with access to other type details
--- lookup type(s)
--- fail out on unsupported conversions
 -- TODO provide a means of resolving references instead of just munging names
 type RootSig sig =
   ( Member (State Root) sig
   , Member (State GlobalGeneratorState) sig
   , Member Fail sig
   )
-
-
-
-
-{-
-runRootM ::
-     (Carrier sig m, RootSig sig) => Root -> m a -> (H.HashMap Text DataType, a)
-runRootM r m = run . evalState r . runState (H.empty :: H.HashMap Text DataType) $ m
--}
-
--- type TypeSig sig = _
--- type ConstructorSig sig = _
--- type FieldSig sig = _
--- type RouteM a = _
-
-
-
 
 traverseComponentSchemas :: (MonadFail m, Carrier sig m, RootSig sig) => (Text -> Schema -> m a) -> m [a]
 traverseComponentSchemas f = do
@@ -114,7 +87,7 @@ withPath ::
   -> H.HashMap Method ApiEndpoint
   -> ReaderC Path (ReaderC (H.HashMap Method ApiEndpoint) m) a
   -> m a
-withPath p methods m = runReader methods $ runReader p m -- runReader p $ runReader methods m
+withPath p methods m = runReader methods $ runReader p m
 
 data TypeOutputModule
   = TypeOutputModule [Text]
@@ -140,6 +113,7 @@ renderComponentSchemaDataTypes resolvers = do
                   , constructorFields = sortOn fieldOrderProjection ctorFields
                   }
                 ]
+              , codings = includeCoders standardCoders [MT "application/json"]
               }
     modify $ \rs -> (rs :: GlobalGeneratorState) & declaredTypes %~ insertIdent cfn r
     pure r
@@ -196,7 +170,7 @@ renderApiEndpoints resolvers = do
 
       let nestedLists =
             H.toList $
-            fmap (\r -> H.toList $ responseContent r) $
+            fmap (\r -> M.toList $ responseContent r) $
             (apiEndpointResponses ^. responses)
           searchSpace = do
             (pat, resps) <- nestedLists
@@ -218,7 +192,7 @@ renderApiEndpoints resolvers = do
       -- We need [(status, [(contentType, {status, content, suffix})])]
       let groupedByPatResponses = groupBy (\r1 r2 -> responsePattern r1 == responsePattern r2) flatResponses
       -- Unsafe, but meh.
-          nestedResponses = H.fromList $ map (\l -> (responsePattern $ head l, NestedResponse apiEndpointOperationId $ H.fromList $ map (\r -> (responseContentType r, r)) l)) groupedByPatResponses
+          nestedResponses = H.fromList $ map (\l -> (responsePattern $ head l, NestedResponse apiEndpointOperationId $ M.fromList $ map (\r -> (responseContentType r, r)) l)) groupedByPatResponses
 
       pure $ Endpoint
         { endpointMethod = method
@@ -239,46 +213,6 @@ renderApiEndpoints resolvers = do
   assign @GlobalGeneratorState declaredEndpoints $ concat result
 
 
-main :: IO ()
-main = readSpec >>= go
-
-
-commonMarkToHaddock :: Text -> Text
-commonMarkToHaddock mark = case runPure (readCommonMark commonMarkDefs mark >>= writeHaddock haddockDefs) of
-  Left err -> error $ show err
-  Right ok -> ok
-  where
-    commonMarkDefs =
-      def { readerExtensions = enableExtension Ext_raw_html $ getDefaultExtensions "commonmark" }
-    haddockDefs =
-      def { writerExtensions = getDefaultExtensions "haddock" }
-
-
-data OpenApiContext = OpenApiContext
-  { supportedContentTypes :: H.HashMap Text ContentTypeHandler
-  }
-
-defaultContext :: OpenApiContext
-defaultContext = OpenApiContext builtInContentTypes
-{-
-  { typeConversions :: Referenceable Schema -> Either String (Text, Bool)
-  , fieldSorter :: (Text, Referenceable Schema) -> (Text, Referenceable Schema) -> Ordering
-  }
-
-
--- | The rule must be capable of examining the schema and comprehensively generating the type.
-addConversionRule :: (Referenceable Schema -> Either String (Text, Bool)) -> Context -> Context
-addConversionRule rule Context{..} = Context
-  { typeConversions = \s -> case rule s of
-      -- TODO this discards the error
-      Left _ -> typeConversions s
-      Right out -> Right out
-  , fieldSorter = fieldSorter
-  }
-
--}
-
-instance ToJSON a => Quote (Maybe a)
 
 -- TODO add support for custom adjustedTypes + patching over types with more specific values
 go :: Root -> IO ()
@@ -321,11 +255,4 @@ go r = do
     typeTemplate >>= (\t -> eitherRenderWith customFilters t env)
 -}
   where
-    customFilters =
-      H.fromList
-        [ "commonMarkToHaddock" @: commonMarkToHaddock
-        , "lookupContentTypeSuffix" @:
-          (\t ->
-             fmap contentTypeShorthandSuffix $ H.lookup t builtInContentTypes)
-        , "patternPredicate" @: predFromPattern
-        ]
+    customFilters = makeStandardTemplateHelpers standardCoders

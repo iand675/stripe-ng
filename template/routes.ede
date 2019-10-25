@@ -97,7 +97,11 @@ instance FromHttpResponse {{typeName}}Response where
 {% endfor %}
     | otherwise = throwError ("Unhandled status code in response." :: String)
 
-
+{% for status in endpoint.value.endpointNestedResponses %}
+{% for contentType in status.value.contentTypes %}
+-- TODO output decoder instance for types
+{% endfor %}
+{% endfor %}
 
 {-
 {{fieldPrefix}} :: {{typeName}}

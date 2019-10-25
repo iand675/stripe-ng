@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -23,6 +22,7 @@ import qualified Data.ByteString.Char8 as C
 import Data.Char (digitToInt)
 import Data.Hashable
 import Data.Maybe (catMaybes, fromMaybe)
+import qualified Data.Map as M
 import Data.String
 import Data.Text (Text)
 import qualified Data.HashMap.Strict as H
@@ -33,6 +33,7 @@ import qualified Text.EDE.Filters as EDE
 import Data.Vector (Vector)
 import qualified Data.Vector as V
 import GHC.Generics (Generic)
+import qualified Network.HTTP.Media as Media
 
 newtype PathTemplate = PathTemplate { pathSegments :: [PathSegment] }
   deriving (Eq, Ord, Hashable, Generic)
@@ -133,6 +134,17 @@ data Root = Root
   , rootExternalDocs :: Maybe Object
   } deriving (Show, Eq)
 
+instance ToJSON Root where
+  toJSON Root{..} = object
+    [ "openapi" .= rootOpenapi
+    , "info" .= rootInfo
+    , "paths" .= rootPaths
+    , "security" .= rootSecurity
+    , "servers" .= rootServers
+    , "tags" .= rootTags
+    , "externalDocs" .= rootExternalDocs
+    ]
+
 instance FromJSON Root where
   parseJSON = withObject "Root" $ killer $ do
     rootOpenapi <- require "openapi"
@@ -144,6 +156,7 @@ instance FromJSON Root where
     rootTags <- fromMaybe V.empty <$> optional "tags"
     rootExternalDocs <- optional "externalDocs"
     pure $ Root{..}
+
 
 data Info = Info
   { infoTitle :: Text
@@ -166,6 +179,16 @@ instance FromJSON Info where
     infoExtensions <- takeExtensions
     pure $ Info{..}
 
+instance ToJSON Info where
+  toJSON Info{..} = Object (infoExtensions <> H.fromList
+    [ "title" .= infoTitle
+    , "description" .= infoDescription
+    , "termsOfService" .= infoTermsOfService
+    , "contact" .= infoContact
+    , "license" .= infoLicense
+    , "version" .= infoVersion
+    ])
+
 data Contact = Contact
   { contactName :: Maybe Text
   , contactUrl :: Maybe Text
@@ -181,6 +204,13 @@ instance FromJSON Contact where
     contactExtensions <- takeExtensions
     pure Contact{..}
 
+instance ToJSON Contact where
+  toJSON Contact{..} = Object (contactExtensions <> H.fromList
+    [ "name" .= contactName
+    , "url" .= contactUrl
+    , "email" .= contactEmail
+    ])
+
 data License = License
   { licenseName :: Text
   , licenseUrl :: Maybe Text
@@ -193,6 +223,12 @@ instance FromJSON License where
     licenseUrl <- optional "url"
     licenseExtensions <- takeExtensions
     pure License{..}
+
+instance ToJSON License where
+  toJSON License{..} = Object (licenseExtensions <> H.fromList
+    [ "name" .= licenseName
+    , "url" .= licenseUrl
+    ])
 
 newtype Reference a = Reference Text
   deriving (Show, Eq, Ord, Functor)
@@ -763,9 +799,29 @@ instance ToJSON Responses where
 instance FromJSON Responses where
   parseJSON v = Responses <$> parseJSON v
 
+newtype MT = MT { unMT :: Media.MediaType }
+  deriving (Eq, Ord, Show, IsString, Media.Accept, Media.RenderHeader)
+
+instance FromJSON MT where
+  parseJSON = withText "MediaType" $ \t ->
+    case Media.parseAccept (T.encodeUtf8 t) of
+      Nothing -> fail "Invalid MediaType"
+      Just mt -> pure $ MT mt
+
+instance ToJSON MT where
+  toJSON = toJSON . T.decodeUtf8 . Media.renderHeader
+
+instance FromJSONKey MT where
+  fromJSONKey = FromJSONKeyTextParser $ \t ->
+    case Media.parseAccept (T.encodeUtf8 t) of
+      Nothing -> fail "Invalid MediaType"
+      Just mt -> pure $ MT mt
+
+instance ToJSONKey MT where
+  toJSONKey = toJSONKeyText (T.decodeUtf8 . Media.renderHeader)
 
 data Response = Response
-  { responseContent :: RefMap MediaType
+  { responseContent :: M.Map MT (Referenceable MediaType)
   , responseDescription :: CommonMark
   , responseHeaders :: RefMap Header
   , responseLinks :: RefMap Link
@@ -782,7 +838,7 @@ instance ToJSON Response where
 instance FromJSON Response where
   parseJSON = withObject "Response" $ killer $ do
     responseDescription <- require "description"
-    responseContent <- defaultOption H.empty "content"
+    responseContent <- defaultOption mempty "content"
     responseHeaders <- defaultOption H.empty "headers"
     responseLinks <- defaultOption H.empty "links"
     pure Response{..}

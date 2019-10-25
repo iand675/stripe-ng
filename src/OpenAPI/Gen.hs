@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as H
 import           Data.List (intercalate)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as M
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as S
 import           Data.Text (Text)
@@ -30,132 +31,32 @@ import qualified Data.Text.Manipulate as T
 import           Data.Tree (Tree(..))
 import qualified Data.Vector as V
 import           GHC.Generics (Generic)
+import qualified Network.HTTP.Media as Media
+
+import           OpenAPI.Gen.Coders
+import           OpenAPI.Gen.Identifier
 import           OpenAPI.Types
+
+-- | Return the first monadic action result that succeeds
+firstSuccess :: Monad m => [m (Maybe a)] -> m (Maybe a)
+firstSuccess [] = pure Nothing
+firstSuccess (mm : next) = do
+  m <- mm
+  case m of
+    Nothing -> firstSuccess next
+    Just _ -> pure m
 
 -- TODO this might be useful in OpenAPI.Types, not sure. Would also be good to track whether names have been munged
 data SchemaParent
-  = SchemaParentComponents {- | Schema Name -} Text Components
-  | SchemaParentParameter {- | Parameter Name -} Text Parameter
-  | SchemaParentSchemaProperty {- | Property Name -} Text Schema
-  | SchemaParentSchemaAnyOf {- | Index -} Int Schema
+  = SchemaParentComponents Text Components
+  | SchemaParentParameter Text Parameter
+  | SchemaParentSchemaProperty Text Schema
+  | SchemaParentSchemaAnyOf Int Schema
   | SchemaParentSchemaItems Schema
   | SchemaParentMediaType MediaType
   deriving (Show, Eq)
 
 -- $ Data types used in output
-
--- | Can be function, type, whatever, if it's able to be qualified in a Haskell program
-newtype UnscopedIdent = UnscopedIdent { fromUnscopedIdent :: Text }
-  deriving (Show, Eq, Ord, Hashable, Semigroup, ToJSON, FromJSON, ToJSONKey, FromJSONKey)
-
-rewriteUnscoped :: (Text -> Text) -> UnscopedIdent -> UnscopedIdent
-rewriteUnscoped f (UnscopedIdent i) = UnscopedIdent $ f i
-
-newtype ScopedIdent = ScopedIdent { fromScopedIdent :: NonEmpty UnscopedIdent }
-  deriving (Show, Eq, Ord, Hashable, Semigroup)
-
-rewriteScoped :: (Text -> Text) -> (Text -> Text) -> ScopedIdent -> ScopedIdent
-rewriteScoped fHead fRest (ScopedIdent (x NE.:| xs)) = ScopedIdent ((coerce fHead) x NE.:| map (coerce fRest) xs)
-
-localScope :: UnscopedIdent -> ScopedIdent
-localScope = ScopedIdent . pure
-
-pushScope :: UnscopedIdent -> ScopedIdent -> ScopedIdent
-pushScope x (ScopedIdent xs) = coerce (x NE.<| xs)
-
-popScope :: ScopedIdent -> (UnscopedIdent, Maybe ScopedIdent)
-popScope (ScopedIdent xs) = coerce (NE.uncons xs)
-
-scope :: ScopedIdent -> ModuleIdent
-scope = ModuleIdent . NE.tail . fromScopedIdent
-
--- not total maybe? it's cool, don't worry about it
-scopedFromDots :: Text -> ScopedIdent
-scopedFromDots t = case reverse $ T.splitOn "." t of
-  [] -> error "scopedFromDots: can't use an empty string"
-  (x:xs) -> coerce (x NE.:| xs)
-
-scopedToLocal :: ScopedIdent -> UnscopedIdent
-scopedToLocal (ScopedIdent i) = NE.head i
-
--- TODO use a builder or something
-qualifyScoped :: ScopedIdent -> Text
-qualifyScoped (ScopedIdent ((UnscopedIdent x) NE.:| xs)) = foldr (\(UnscopedIdent chain) current -> chain <> "." <> current) x xs
-
-instance ToJSON ScopedIdent where
-  toJSON = toJSON . qualifyScoped
-
--- | A way of imitating the haskell module hierarchy-
--- anything in rootLabel is a local identifier,
--- anything in the subForest is intended to able to be used qualified elsewhere.
-data IdentTree a = IdentNode
-  { localItems :: !(H.HashMap UnscopedIdent a)
-  , submoduleItems :: !(H.HashMap UnscopedIdent (IdentTree a))
-  } deriving (Show, Eq, Generic, Functor)
-
-instance ToJSON a => ToJSON (IdentTree a)
-
-emptyIdentForest :: IdentTree a
-emptyIdentForest = IdentNode H.empty H.empty
-
-insertIdent :: ScopedIdent -> a -> IdentTree a -> IdentTree a
-insertIdent (ScopedIdent original) v rootTree = go (ScopedIdent $ NE.reverse original) v rootTree
-  where
-    go (ScopedIdent (k NE.:| rest)) v (IdentNode r f) = case rest of
-      [] -> IdentNode (H.insert k v r) f
-      (s:ss) ->
-        IdentNode r $
-        H.alter
-          (\level ->
-            Just $
-            go (ScopedIdent (s NE.:| ss)) v $
-            fromMaybe emptyIdentForest level)
-          k
-          f
-
-identInUse :: ScopedIdent -> IdentTree a -> Bool
-identInUse = undefined
-
-identList :: forall a. IdentTree a -> [(ScopedIdent, a)]
-identList = map (\(k, v) -> (ScopedIdent $ NE.fromList $ reverse k, v)) . go []
-  where
-    go :: [UnscopedIdent] -> IdentTree a -> [([UnscopedIdent], a)]
-    go level IdentNode{..} =
-      map (\(k, v) -> (k:level, v)) (H.toList localItems) ++
-      concatMap
-        (\(newLevel, t) -> go (newLevel : level) t)
-        (H.toList submoduleItems)
-
-newtype ModuleIdent = ModuleIdent { fromModuleIdent :: [UnscopedIdent] }
-
-formatModuleIdent :: ModuleIdent -> Text
-formatModuleIdent (ModuleIdent chain) = T.intercalate "." $ reverse $ coerce chain
-
-moduleIdentPieces :: ModuleIdent -> [Text]
-moduleIdentPieces = coerce . reverse . fromModuleIdent
-
-instance Show ModuleIdent where
-  show = T.unpack . formatModuleIdent
-instance ToJSON ModuleIdent where
-  toJSON = toJSON . formatModuleIdent
-
-groupedIdentList :: IdentTree a -> [(ModuleIdent, [(UnscopedIdent, a)])]
-groupedIdentList = map (\(ModuleIdent k, v) -> (ModuleIdent $ reverse k, v)) . go (ModuleIdent [])
-  where
-    go :: ModuleIdent -> IdentTree a -> [(ModuleIdent, [(UnscopedIdent, a)])]
-    go (ModuleIdent level) IdentNode{..} =
-      (ModuleIdent level, H.toList localItems) :
-      concatMap
-        (\(newLevel, t) -> go (ModuleIdent (newLevel : level)) t)
-        (H.toList submoduleItems)
-
-identsInScope :: IdentTree a -> ModuleIdent -> H.HashMap UnscopedIdent a
-identsInScope tree (ModuleIdent original) = go tree $ reverse original
-  where
-    go IdentNode{..} [] = localItems
-    go IdentNode{..} (k:ks) = case H.lookup k submoduleItems of
-      Nothing -> H.empty
-      Just rest -> go rest ks
 
 data AnnotatedIdent a = AnnotatedIdent
   { annotatedIdentAnnotation :: a
@@ -227,7 +128,7 @@ instance ToJSON ResolvedPathSegment where
       ]
 
 data Response = Response
-  { responseContentType :: Text
+  { responseContentType :: MT
   , responsePattern :: ResponseKey
   , responsePatternPredicate :: Text
   , responseType :: RenderedType
@@ -245,7 +146,7 @@ instance ToJSON OpenAPI.Gen.Response where
 
 data NestedResponse = NestedResponse
   { nestedResponseTypeName :: Text
-  , nestedResponseContentTypes :: H.HashMap Text OpenAPI.Gen.Response
+  , nestedResponseContentTypes :: M.Map MT OpenAPI.Gen.Response
   } deriving (Show, Eq, Generic)
 
 instance ToJSON NestedResponse where
@@ -255,12 +156,13 @@ instance ToJSON NestedResponse where
     ]
 
 prettyResponseSuffix ::
-     Maybe Text -- ^ Content type. @Nothing@ if we don't want to add the content type to the suffix.
+     Maybe MT -- ^ Content type. @Nothing@ if we don't want to add the content type to the suffix.
   -> ResponseKey
   -> Text
-prettyResponseSuffix ct pat = prettyMime ct <> prettyPat pat
+prettyResponseSuffix mct pat = prettyMime mct <> prettyPat pat
   where
-    prettyMime t = ""
+    prettyMime Nothing = ""
+    prettyMime (Just ct) = ""
     prettyPat DefaultResponse = "Default"
     prettyPat (ConstStatus statusCode) = fromMaybe (T.pack $ show pat) $ lookup statusCode
       [ (100, "Continue")
@@ -369,6 +271,7 @@ data DataType = DataType
   , constructors :: [Constructor]
   , typeOriginalName :: Text
   , typeDescription :: Maybe Text
+  , codings :: Coders
   } deriving (Show, Eq, Generic)
 
 instance ToJSON DataType
@@ -418,7 +321,8 @@ instance ToJSON FieldEnum where
 makeFields ''GlobalGeneratorState
 
 emptyGlobalGeneratorState :: GlobalGeneratorState
-emptyGlobalGeneratorState = GlobalGeneratorState emptyIdentForest emptyIdentForest mempty
+emptyGlobalGeneratorState = GlobalGeneratorState emptyIdentTree emptyIdentTree mempty
+
 -- $ Traversals over schemas in various parts of an OpenAPI spec
 
 componentTopLevelSchemas :: Traversal' Components Schema
@@ -466,18 +370,6 @@ data ContentTypeHandler = ContentTypeHandler
 instance ToJSON ContentTypeHandler where
   toJSON c = object [ "suffix" .= contentTypeShorthandSuffix c ]
 
-builtInContentTypes :: H.HashMap Text ContentTypeHandler
-builtInContentTypes = H.fromList
-  [ ("application/json", ContentTypeHandler "Json")
-  , ("application/octet-stream", ContentTypeHandler "Binary")
-  , ("text/xml", ContentTypeHandler "Xml")
-  , ("text/html", ContentTypeHandler "Html")
-  , ("application/x-www-form-urlencoded", ContentTypeHandler "Form")
-  , ("multipart/form-data", ContentTypeHandler "MultiPart")
-  ]
-
-
-
 newtype SchemaScope = SchemaScope { fromSchemaScope :: NonEmpty SchemaParent }
   deriving (Show, Eq)
 
@@ -506,12 +398,6 @@ makeRefsHaskellFriendly :: ScopedIdent -> ScopedIdent
 makeRefsHaskellFriendly sidents = ScopedIdent $ coerce $ NE.fromList $ concatMap (T.splitOn ".") $ NE.toList strs
   where
     strs = coerce sidents
-
-
-
-
-
-
 
 
 -- TODO Need to allow multiple resolvers to 'refine' the type
@@ -590,8 +476,7 @@ builtInTypeResolvers = TypeResolvers
       then pure Nothing
       else do
         converted <-
-          fmap V.toList $ --  $ descendSchema fieldName s $
-          V.mapM (renderType rs) (schemaAnyOf s)
+          V.toList <$> V.mapM (renderType rs) (schemaAnyOf s)
         pure $
           Just $ dischargeNullable (schemaNullable s) $ hoistNestedMaybes $ case converted of
             [c]      -> c
@@ -622,7 +507,7 @@ builtInTypeResolvers = TypeResolvers
                     Nothing -> yes n "Text" Nothing
                     Just vs -> do
                       s <- ask
-                      let mvs' = sequence $ fmap (parseMaybe parseJSON) vs
+                      let mvs' = traverse (parseMaybe parseJSON) vs
                       case mvs' of
                         Nothing -> fail "Type of field is a string, so enum types should also be text"
                         Just vs' -> do
@@ -653,13 +538,6 @@ builtInTypeResolvers = TypeResolvers
               ]
         join <$> sequence primitiveTypeIdentifier
 
-firstSuccess :: Monad m => [m (Maybe a)] -> m (Maybe a)
-firstSuccess [] = pure Nothing
-firstSuccess (mm : next) = do
-  m <- mm
-  case m of
-    Nothing -> firstSuccess next
-    Just _ -> pure m
 
 runResolvers ::
      ( Monad m
@@ -705,64 +583,3 @@ predFromPattern pat = parenthesizeIt $ case pat of
   DefaultResponse -> "(const True)"
   where
     parenthesizeIt str = "(" <> T.pack str <> ")"
-
-data Coder = Coder
-  { coderSuffix :: Text
-  , coderSupport :: CoderSupport
-  }
-
-data CoderSupport
-  = EncoderOnly Encoder
-  | DecoderOnly Decoder
-  | BidirectionalCoding Encoder Decoder
-
-data Decoder = Decoder
-  { decoderTemplatePath :: FilePath
-  , decoderExtraImports :: [Text]
-  , decoderFunction :: Text
-  }
-
-data Encoder = Encoder
-  { encoderTemplatePath :: FilePath
-  , encoderExtraImports :: [Text]
-  , encoderFunction :: Text
-  }
-
-standardDecoders :: Map MediaType CoderSupport
-standardDecoders = M.fromList
-  [ ( "application/json"
-    , Decoder
-      { decoderTemplatePath = "template/_include/decoder/json.ede"
-      , decoderExtraImports = ["OpenAPI.Support.Aeson"]
-      , decoderFunction = "httpDecodeJson"
-      }
-    )
-  , ( "application/x-www-form-encoded"
-    , Decoder
-      { decoderTemplatePath = "template/_include/decoder/formencoded.ede"
-      , decoderExtraImports = ["OpenAPI.Support.FormEncoded"]
-      , decoderFunction = "httpDecodeFormEncoded"
-      }
-    )
-  , ( "application/xml"
-    , Decoder
-      { decoderTemplatePath = "template/_include/decoder/xml.ede"
-      , decoderExtraImports = ["OpenAPI.Support.Xml"]
-      , decoderFunction = "httpDecodeXml"
-      }
-    )
-  , ( "text/xml"
-    , Decoder
-      { decoderTemplatePath = "template/_include/decoder/xml.ede"
-      , decoderExtraImports = ["OpenAPI.Support.Xml"]
-      , decoderFunction = "httpDecodeXml"
-      }
-    )
-  , ( "text/plain"
-    , Decoder
-      { decoderTemplatePath = "template/_include/decoder/plaintext.ede"
-      , decoderExtraImports = ["OpenAPI.Support.PlainText"]
-      , decoderFunction = "httpDecodePlainText"
-      }
-    )
-  ]

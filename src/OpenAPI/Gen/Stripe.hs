@@ -7,23 +7,34 @@ import Control.Effect.Fail (MonadFail)
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types
+import qualified Data.Attoparsec.Text as P
 import Data.Text (Text)
 import qualified Data.Text.Manipulate as T
 import qualified Data.HashMap.Strict as H
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Vector as V
+
 import OpenAPI.Types hiding (optional)
-import qualified Data.Attoparsec.Text as P
 import OpenAPI.Gen
+import OpenAPI.Gen.Identifier
 
 -- Extension helpers
 
 expandable :: Schema -> Text -> Bool
-expandable parentSchema fieldName = case H.lookup "x-expandableFields" (schemaExtensions parentSchema)  >>= parseMaybe parseJSON of
-  Nothing -> False
-  Just expandableFields -> V.elem fieldName expandableFields
+expandable parentSchema fieldName =
+  case maybeExpandableFields of
+    Nothing -> False
+    Just expandableFields -> V.elem fieldName expandableFields
+  where
+    maybeExpandableFields = do
+      expandableFieldsJson <-
+        H.lookup "x-expandableFields" (schemaExtensions parentSchema)
+      parseMaybe parseJSON expandableFieldsJson
 
-parseExpansionResources :: MonadFail m => Text -> Schema -> m (V.Vector (Reference Schema))
+parseExpansionResources :: MonadFail m =>
+     Text
+  -> Schema
+  -> m (V.Vector (Reference Schema))
 parseExpansionResources n s = case H.lookup "x-expansionResources" (schemaExtensions s) of
   Nothing -> if V.null $ schemaAnyOf s
     then fail "Don't know how to expand a field that doesn\'t provide anyOf"
@@ -40,16 +51,15 @@ annotateSchemaWithEnumFromDescription s = s
   { schemaEnum = schemaEnum s <|> (fmap toJSON <$> enumFromDescription s)
   }
 
--- TODO skip prior stuff
 -- approx regex: '[Oo]ne of:? (`([A-Za-z0-9_-]+`(, (or)?))+'
 enumFromDescription ::
      Schema -- ^ Info including description
   -> Maybe (V.Vector Text) -- ^ Enum Values
-enumFromDescription s = case schemaDescription s of
-  Nothing -> Nothing
-  Just (CommonMark desc) -> case P.parseOnly enumDescriptionParser desc of
+enumFromDescription s = do
+  (CommonMark desc) <- schemaDescription s
+  case P.parseOnly enumDescriptionParser desc of
     Left _ -> Nothing
-    Right ok -> Just $ V.fromList ok
+    Right ok -> pure $ V.fromList ok
 
 enumDescriptionParser :: P.Parser [Text]
 enumDescriptionParser = do

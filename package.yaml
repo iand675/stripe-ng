@@ -39,8 +39,10 @@ dependencies:
 - http-client-tls
 - http-types
 - http-conduit
+- http-media
 - conduit
 - lens
+- pandoc
 - exceptions
 - pretty-show
 - scientific
@@ -52,25 +54,44 @@ dependencies:
 - fused-effects
 - fused-effects-lens
 - containers
+- yaml
+- ede
+- xmlbf
+- tasty-discover
+- tasty-quickcheck
+- QuickCheck
 
 default-extensions:
   - ConstraintKinds
+  - DeriveFunctor
+  - DeriveFoldable
   - DeriveGeneric
-  - GeneralisedNewtypeDeriving
+  - GeneralizedNewtypeDeriving
   - OverloadedStrings
   - QuasiQuotes
   - RecordWildCards
   - TypeApplications
   - FlexibleContexts
+  - LambdaCase
+  - ScopedTypeVariables
 
 library:
   source-dirs: src
   exposed-modules:
   - OpenAPI.Gen
+  - OpenAPI.Gen.Coders
+  - OpenAPI.Gen.Coders.Form
+  - OpenAPI.Gen.Coders.Json
+  - OpenAPI.Gen.Coders.Xml
+  - OpenAPI.Gen.Language.Haskell
   - OpenAPI.Gen.Reader
   - OpenAPI.Gen.Writer
   - OpenAPI.Gen.Stripe
+  - OpenAPI.Gen.Identifier
+  - OpenAPI.TemplateHelpers
   - OpenAPI.Types
+  - OpenAPI.Support
+  - OpenAPI.Support.Stripe
   other-modules: []
   when:
   - condition: flag(strict-json-check)
@@ -90,7 +111,6 @@ executables:
     - filepath
     - stripe-ng
     - pretty-show
-    - pandoc
     - ede
     - lens
 
@@ -107,6 +127,7 @@ tests:
     - tasty
     - tasty-discover
     - tasty-hspec
+    - tasty-quickcheck
     - aeson
     - aeson-qq
 
