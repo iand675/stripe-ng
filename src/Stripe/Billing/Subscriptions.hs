@@ -25,6 +25,8 @@ data SubscriptionStatus
   | PastDue
   | Canceled
   | Unpaid
+  | Incomplete
+  | OtherSubscriptionStatus t
   deriving (Show, Eq, Generic, Typeable)
 
 instance FromJSON SubscriptionStatus where
@@ -34,7 +36,8 @@ instance FromJSON SubscriptionStatus where
     "past_due" -> pure PastDue
     "canceled" -> pure Canceled
     "unpaid" -> pure Unpaid
-    _ -> fail ("Invalid SubscriptionStatus: " ++ show t)
+    "incomplete" -> pure Incomplete
+    _ -> pure $ OtherSubscriptionStatus t
 
 data Subscription = Subscription
   { subscriptionId :: Id Subscription
