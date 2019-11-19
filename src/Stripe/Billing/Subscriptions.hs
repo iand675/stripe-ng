@@ -6,6 +6,7 @@ import {-# SOURCE #-} Stripe.Billing.SubscriptionItems
 import Stripe.Core
 import {-# SOURCE #-} Stripe.Customers
 import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
 import Stripe.Utils
 
 data ChargeMode
@@ -26,7 +27,7 @@ data SubscriptionStatus
   | Canceled
   | Unpaid
   | Incomplete
-  | OtherSubscriptionStatus t
+  | OtherSubscriptionStatus Text
   deriving (Show, Eq, Generic, Typeable)
 
 instance FromJSON SubscriptionStatus where
