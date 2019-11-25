@@ -57,7 +57,7 @@ data Subscription = Subscription
   , subscriptionItems :: List SubscriptionItem
   , subscriptionLiveMode :: Bool
   , subscriptionMetadata :: Metadata
-  , subscriptionPlan :: Plan
+  , subscriptionPlan :: Maybe Plan
   , subscriptionQuantity :: Maybe Int
   , subscriptionStart :: Timestamp
   , subscriptionStatus :: SubscriptionStatus
@@ -87,7 +87,7 @@ instance FromJSON Subscription where
       <*> req "items"
       <*> req "livemode"
       <*> req "metadata"
-      <*> req "plan"
+      <*> opt "plan"
       <*> opt "quantity"
       <*> req "start"
       <*> req "status"
