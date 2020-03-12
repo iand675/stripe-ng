@@ -1,7 +1,8 @@
-resolver: lts-12.16
+resolver: lts-13.11
 
 packages:
   - .
 
 nix:
   pure: false
+  path: [nixpkgs=./nix]
