@@ -1,4 +1,5 @@
-.stack-work/
-stripe-ng.cabal
 *~
 .envrc.private
+.stack-work/
+/stack.yaml.lock
+stripe-ng.cabal
