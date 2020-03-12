@@ -11,6 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 module Stripe.Utils
   ( module Stripe.Utils
   , module X
@@ -58,7 +59,6 @@ import Web.HttpApiData as X
 import Prelude hiding (id)
 
 import Stripe.Core
-
 
 -- TODO may need to get fancier
 enumerate :: (MonadStripe m, HasId a (Id a)) => (Pagination a -> m (List a)) -> ConduitT () a m ()
@@ -150,6 +150,13 @@ req t = do
   modify (H.delete t)
   pure r
 
+lst :: A.FromJSON [a] => Text -> Parser [a]
+lst t = do
+  o <- get
+  r <- lift (o A..:? t A..!= [])
+  modify (H.delete t)
+  pure r
+
 opt :: A.FromJSON a => Text -> Parser (Maybe a)
 opt t = do
   o <- get
@@ -172,6 +179,11 @@ req t = do
   o <- ask
   lift (o A..: t)
 
+lst :: A.FromJSON [a] => Text -> Parser [a]
+lst t = do
+  o <- ask
+  lift (o A..:? t A..!= [])
+
 opt :: A.FromJSON a => Text -> Parser (Maybe a)
 opt t = do
   o <- ask
@@ -183,9 +195,6 @@ assertObject :: Text -> Parser ()
 assertObject t = do
   str <- req "object"
   when (str /= t) $ fail ("object is of type " ++ show str ++ ", expected object of type " ++ show t)
-
-
-
 
 runSimpleStripe :: (MonadIO m) => StripeState -> ReaderT StripeState m a -> m a
 runSimpleStripe st m = runReaderT m st

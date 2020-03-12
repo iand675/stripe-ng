@@ -1,4 +1,5 @@
 module Stripe.Billing.Products where
+
 import Stripe.Core
 import Stripe.Utils
 
@@ -58,7 +59,7 @@ instance FromJSON Product where
       <*> req "attributes"
       <*> opt "caption"
       <*> req "created"
-      <*> req "deactivate_on"
+      <*> lst "deactivate_on"
       <*> req "description"
       <*> req "images"
       <*> req "livemode"

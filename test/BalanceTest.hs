@@ -5,6 +5,7 @@ import Data.Proxy
 import qualified Stripe.Lens as S
 import Stripe.Balance
 import Stripe.Utils
+import Stripe.Core
 import Test.Tasty.Hspec
 import qualified Data.Vector as V
 
