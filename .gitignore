@@ -1,5 +1,6 @@
 *~
 .envrc.private
 .stack-work/
+/dist-newstyle
 /stack.yaml.lock
 stripe-ng.cabal
